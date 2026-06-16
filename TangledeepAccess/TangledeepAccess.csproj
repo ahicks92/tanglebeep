@@ -88,9 +88,15 @@
             <HintPath>$(Managed)\Assembly-CSharp-firstpass.dll</HintPath>
             <Private>false</Private>
         </Reference>
-        <!-- Rewired: the game's input manager. All real input flows through it. -->
-        <Reference Include="Rewired_Core">
-            <HintPath>$(Managed)\Rewired_Core.dll</HintPath>
+        <!-- TextMeshPro: UI labels are TextMeshProUGUI; we read their text for speech.
+             TextMeshProUGUI derives from UnityEngine.UI.MaskableGraphic, so UnityEngine.UI
+             is required to reference it. -->
+        <Reference Include="Unity.TextMeshPro">
+            <HintPath>$(Managed)\Unity.TextMeshPro.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="UnityEngine.UI">
+            <HintPath>$(Managed)\UnityEngine.UI.dll</HintPath>
             <Private>false</Private>
         </Reference>
     </ItemGroup>
