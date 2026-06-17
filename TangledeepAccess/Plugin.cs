@@ -107,6 +107,16 @@ namespace TangledeepAccess {
                 _speech?.Speak(result.Speak);
             }
 
+            // On-demand spatial queries (read-here / scan) the gameplay hotkey hook requested.
+            // Explicit player queries interrupt, so the answer is immediate.
+            GameplayCommand? gameplay = UiRuntime.ConsumePendingGameplay();
+            if (gameplay.HasValue) {
+                string spoken = GameplayReader.Execute(gameplay.Value);
+                if (!string.IsNullOrEmpty(spoken)) {
+                    _speech?.Speak(spoken);
+                }
+            }
+
             // Spontaneous game-log events (combat, status, NPC barks) the Harmony hook buffered
             // this frame. Spoken without interrupting so a multi-event turn is not chopped, and
             // after any overlay speech above so menu navigation stays responsive.

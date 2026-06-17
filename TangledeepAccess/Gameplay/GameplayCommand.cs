@@ -1,0 +1,15 @@
+namespace TangledeepAccess.Gameplay {
+    /// <summary>
+    /// An on-demand spatial query the player triggered with a mod hotkey during gameplay. The
+    /// input hook records one of these; the per-frame pump runs it through
+    /// <see cref="GameplayReader"/> and speaks the answer. Distinct from <c>NavCommand</c>,
+    /// which drives menu overlays.
+    /// </summary>
+    internal enum GameplayCommand {
+        /// <summary>Describe the hero's current tile (position, terrain, items).</summary>
+        ReadHere,
+
+        /// <summary>Sweep everything in line of sight by direction and distance.</summary>
+        Scan,
+    }
+}

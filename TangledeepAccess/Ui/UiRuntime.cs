@@ -1,3 +1,4 @@
+using TangledeepAccess.Gameplay;
 using TangledeepAccess.Ui;
 
 namespace TangledeepAccess {
@@ -20,6 +21,17 @@ namespace TangledeepAccess {
         internal static NavCommand? ConsumePendingNav() {
             NavCommand? cmd = _pendingNav;
             _pendingNav = null;
+            return cmd;
+        }
+
+        // Gameplay spatial-query hotkey (read-here / scan), same hook-sets / pump-consumes split.
+        private static GameplayCommand? _pendingGameplay;
+
+        internal static void SetPendingGameplay(GameplayCommand command) => _pendingGameplay = command;
+
+        internal static GameplayCommand? ConsumePendingGameplay() {
+            GameplayCommand? cmd = _pendingGameplay;
+            _pendingGameplay = null;
             return cmd;
         }
     }

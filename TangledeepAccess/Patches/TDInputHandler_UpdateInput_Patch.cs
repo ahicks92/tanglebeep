@@ -1,4 +1,5 @@
 using HarmonyLib;
+using TangledeepAccess.Gameplay;
 using TangledeepAccess.Ui;
 using UnityEngine;
 
@@ -16,13 +17,21 @@ namespace TangledeepAccess.Patches {
     [HarmonyPatch(typeof(TDInputHandler), "UpdateInput")]
     internal static class TDInputHandler_UpdateInput_Patch {
         private static bool Prefix() {
-            OverlayDispatcher dispatcher = UiRuntime.Dispatcher;
-            if (dispatcher == null || !dispatcher.WantsInputCapture) {
-                return true; // nothing to drive — let the game handle input
+            // Mod gameplay hotkeys (spatial queries) act only in free play — no menu/dialog open.
+            // These keys are unbound in the game, so consuming the frame has no side effect.
+            if (!UIManagerScript.AnyInteractableWindowOpen()) {
+                GameplayCommand? gameplay = ReadGameplayKey();
+                if (gameplay.HasValue) {
+                    UiRuntime.SetPendingGameplay(gameplay.Value);
+                    return false;
+                }
+
+                return true; // no menu, no mod key — game handles movement/actions
             }
 
-            if (!UIManagerScript.AnyInteractableWindowOpen()) {
-                return true; // only take over while a menu is actually open
+            OverlayDispatcher dispatcher = UiRuntime.Dispatcher;
+            if (dispatcher == null || !dispatcher.WantsInputCapture) {
+                return true; // a menu is open but we have nothing to drive — let the game handle it
             }
 
             NavCommand? command = ReadNavKey();
@@ -32,6 +41,21 @@ namespace TangledeepAccess.Patches {
 
             UiRuntime.SetPendingNav(command.Value);
             return false; // we handled it; suppress the game's input this frame
+        }
+
+        // Mod gameplay hotkeys. K = read the current tile, L = scan everything in view. Chosen
+        // from letters the Default control layout leaves unbound (see docs/controls.md), so they
+        // never shadow a game action.
+        private static GameplayCommand? ReadGameplayKey() {
+            if (Input.GetKeyDown(KeyCode.K)) {
+                return GameplayCommand.ReadHere;
+            }
+
+            if (Input.GetKeyDown(KeyCode.L)) {
+                return GameplayCommand.Scan;
+            }
+
+            return null;
         }
 
         private static NavCommand? ReadNavKey() {
