@@ -9,8 +9,10 @@ namespace TangledeepAccess.Dev {
     ///
     /// This covers the uiObjectFocus menu model (title, dialogs, most screens). In-game hero
     /// actions use the `step`/`wait`/`stairs`/`pickup` verbs, which commit a TurnData through
-    /// GameMasterScript.TryNextTurn (the game resolves move/attack/NPC-interaction). Save-slot
-    /// selection still has no verb (drive it via /eval OnSelectSlotConfirmPressed).
+    /// GameMasterScript.TryNextTurn (the game resolves move/attack/NPC-interaction). To load a
+    /// save without walking the title menus, use the /loadsave endpoint (it drives the game's own
+    /// load path directly; the slot-screen handler OnSelectSlotConfirmPressed no-ops if called
+    /// cold, since it needs the CONTINUE slot window to already be set up).
     /// </summary>
     internal static class InputInjector {
         // UIObject.neighbors is an 8-slot compass; orthogonals only.

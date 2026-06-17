@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using TangledeepAccess.Speech;
 using TangledeepAccess.Util;
@@ -11,6 +12,8 @@ namespace TangledeepAccess.Dev {
     /// run-game.ps1). Exposes a loopback HTTP server so an external driver can:
     ///   POST /eval         body = C# source, run against the live game (REPL state
     ///                      persists across calls); returns output + result/errors.
+    ///   POST /loadsave     body = save slot index (default 0). Loads that slot from the
+    ///                      title screen and BLOCKS until the gameplay scene is interactive.
     ///   GET  /speech?since=N   lines the mod has spoken since cursor N (we can't hear
     ///                          the TTS, so this is how we observe it).
     ///   GET  /health       liveness.
@@ -124,6 +127,10 @@ namespace TangledeepAccess.Dev {
                 return OnMainThread(() => InputInjector.Inject(verb));
             }
 
+            if (route == "/loadsave" && method == "POST") {
+                return LoadSave(body);
+            }
+
             if (route == "/screenshot" && method == "GET") {
                 return Screenshot();
             }
@@ -180,6 +187,87 @@ namespace TangledeepAccess.Dev {
                 Thread.Sleep(50);
             }
             return "[timeout] screenshot not written within 8s\n";
+        }
+
+        // Load a save slot directly from the title screen and BLOCK until the gameplay scene
+        // is fully interactive, so the driver can script "drop me into slot N" in one call.
+        //
+        // Drives the same path the CONTINUE button uses: set the slot, mark it a load (not a
+        // new game), stash the LOADGAME response the gameplay-scene init reads, and start the
+        // FadeOutThenLoadGame coroutine. We kick it on the main thread, then poll (from this
+        // HTTP thread) for gameLoadSequenceCompleted, which the load coroutine sets true on its
+        // final line. We force it false first so a second in-session load can't observe a stale
+        // true and return early.
+        //
+        // The load's GameMasterScript init force-sets tdHasFocus=true regardless of real OS
+        // focus (GameMasterScript.cs ~2378), and TDInputHandler gates physical-key processing on
+        // that flag - so without correction the game would eat stray keystrokes while it runs
+        // unfocused in the background. Once the load settles we set tdHasFocus to whether the
+        // game window is *actually* the OS foreground window. We can't trust
+        // UnityEngine.Application.isFocused here: it initializes true and only flips on an
+        // OnApplicationFocus(false) event, so a game launched in the background (never focused,
+        // so never a focus-loss event) reports true forever - the same lie. We ask Win32 instead.
+        private string LoadSave(string body) {
+            int slot = 0;
+            string trimmed = (body ?? "").Trim();
+            if (trimmed.Length > 0 && !int.TryParse(trimmed, out slot)) {
+                return "[bad slot] body must be an integer save slot index (default 0)\n";
+            }
+
+            string kick = OnMainThread(() => {
+                UIManagerScript ums = UIManagerScript.singletonUIMS;
+                if (ums == null) {
+                    return "[no UIManagerScript] not on a screen that can start a load\n";
+                }
+                GameStartData.saveGameSlot = slot;
+                GameStartData.newGame = false;
+                GameMasterScript.gameLoadSequenceCompleted = false;
+                UIManagerScript.SetGlobalResponse(DialogButtonResponse.LOADGAME);
+                ums.StartCoroutine(ums.FadeOutThenLoadGame());
+                return "ok";
+            });
+            if (kick != "ok") {
+                return kick;
+            }
+
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            while (timer.Elapsed.TotalSeconds < 60) {
+                string status = OnMainThread(() => {
+                    if (!GameMasterScript.gameLoadSequenceCompleted
+                        || GameMasterScript.heroPCActor == null
+                        || GameMasterScript.gmsSingleton == null) {
+                        return "";
+                    }
+                    bool focused = GameWindowIsForeground();
+                    GameMasterScript.gmsSingleton.tdHasFocus = focused;
+                    string map = MapMasterScript.activeMap != null ? MapMasterScript.activeMap.GetName() : "?";
+                    return "loaded slot " + slot + ": hero=" + GameMasterScript.heroPCActor.displayName
+                        + " map=" + map + " focus=" + focused + "\n";
+                });
+                if (status.Length > 0) {
+                    return status;
+                }
+                Thread.Sleep(100);
+            }
+            return "[timeout] load slot " + slot + " did not complete within 60s\n";
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
+        // True only if our process owns the actual OS foreground window. Unlike
+        // Application.isFocused this reflects real focus even for a never-focused background launch.
+        private static bool GameWindowIsForeground() {
+            IntPtr fg = GetForegroundWindow();
+            if (fg == IntPtr.Zero) {
+                return false;
+            }
+            uint pid;
+            GetWindowThreadProcessId(fg, out pid);
+            return pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
         }
     }
 }

@@ -61,7 +61,20 @@ A logged failure is actionable; a silent one is invisible.
   first). **Kill the game before `build.ps1`** — a running game locks the deployed plugin DLL.
   **Prism/NVDA is OFF by default** (`TANGLEDEEP_NO_SPEECH=1`) so headless/overnight runs don't
   depend on a screen reader; spoken text is still captured for `/speech`. Pass `-Speech` to
-  voice through NVDA.
+  voice through NVDA. **`-SaveSlot N`** takes you from cold launch to in-game in one command:
+  once the dev server answers it calls the `/loadsave` endpoint for slot N (retrying until the
+  title's UI is ready), so you skip the new-game flow entirely (e.g. `run-game.ps1 -SaveSlot 0`).
+  - **Restarting the game (do this right — it bit us):** to restart, **properly cancel the
+    running `run-game.ps1` background task** (its `finally` kills the game and releases the
+    lock), confirm teardown, *then* relaunch. **Never start a second launcher while the first
+    background task is still alive.** Two launchers race the dev-server port (8770): the new
+    game can't bind it and exits with code 1, while the second launcher externally kills the
+    first's game so that task reports a spurious failure (exit -1/255). To enforce this,
+    `run-game.ps1` takes a single-instance lock (`%TEMP%\tangledeep-run-game.lock`, holds the
+    launcher PID) and **refuses** to start if a live launcher holds it; a stale lock (dead
+    holder, e.g. a hard-killed launcher) is cleared automatically. The launcher also kills any
+    orphaned game and **waits for process exit + port 8770 to free** (≤15s) before starting —
+    `Stop-Process` returns before teardown, so a naive kill-then-start races the socket.
 - All scripts auto-locate the Steam install; override with `TANGLEDEEP_GAME`.
 - `<Version>` lives in `Directory.Build.props` (single source of truth; the plugin's
   `BepInPlugin` literal is generated from it). `LangVersion` 7.3 (safe for Unity Mono).
@@ -143,11 +156,28 @@ Endpoints (loopback; drive with `curl`):
     turn (`TurnTypes.PASS`); `stairs` calls `TravelManager.TryTravelStairs()`; `pickup`
     calls `TileInteractions.TryPickupItemsInHeroTile()`. This is how you drive gameplay
     (combat, shops, descent) over HTTP for testing.
-  - Save-slot selection still has no verb (drive it via `/eval`
-    `TitleScreenScript.titleScreenSingleton.OnSelectSlotConfirmPressed(idx)`).
+  - Save-slot selection has no menu verb — to skip straight into a save use `/loadsave`
+    (below), **not** `OnSelectSlotConfirmPressed`, which no-ops if called cold (it needs the
+    CONTINUE slot window already set up).
+- `POST /loadsave` — body is a save slot index (default `0`). From the title screen, loads
+  that slot and **blocks until the gameplay scene is interactive**, then returns
+  `loaded slot N: hero=… map=… focus=…`. This is the fast path to a real in-game state for
+  iterating on gameplay/GUI without walking the new-game flow. It drives the game's own load
+  path (set slot, `GameStartData.newGame=false`, stash the `LOADGAME` response that the
+  gameplay-scene init reads, run `UIManagerScript.FadeOutThenLoadGame`), then polls
+  `GameMasterScript.gameLoadSequenceCompleted` (the load coroutine's final line; forced false
+  first so a second in-session load can't see a stale true). **Focus fix baked in:** the load
+  force-sets `GameMasterScript.tdHasFocus=true` regardless of real OS focus, and
+  `TDInputHandler` gates physical-key processing on that flag — so a background load would make
+  the game eat stray keystrokes. On completion the endpoint sets `tdHasFocus` to whether our
+  process actually owns the OS foreground window (a Win32 `GetForegroundWindow` check —
+  `Application.isFocused` is unreliable: it inits true and only flips on a focus-*loss* event,
+  so a never-focused background launch reports true forever). Injected `/input` verbs are
+  unaffected (they bypass the input gate via `TryNextTurn`).
 
-Iteration loop: edit → **kill the game** → `build.ps1` → `run-game.ps1` (background) →
-poll `/health` → `curl`.
+Iteration loop: edit → **kill the game** (cancel the `run-game.ps1` background task) →
+`build.ps1` → `run-game.ps1 -SaveSlot 0` (background; lands in-game on its own) → poll
+`/health` → `curl`. (Drop `-SaveSlot` to stop at the title; load later with `POST /loadsave`.)
 
 ## Architecture
 
