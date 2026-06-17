@@ -8,8 +8,8 @@ namespace TangledeepAccess.Ui
     /// Drives the overlay system one tick at a time. Holds an ordered list of handlers
     /// (last registered = top of the stack) and, per <see cref="OverlayId"/>, an ephemeral
     /// focus cache (a <see cref="GraphState"/>). Each tick it finds the topmost active
-    /// handler, builds its overlay, reconciles focus, applies any pending game-driven focus
-    /// change, and returns the text to speak (or null).
+    /// handler, builds its overlay, reconciles focus, and either applies a player navigation
+    /// command (our own key handling) or follows the game's focus.
     ///
     /// <para>Cache lifecycle implements the rule "when a handler that was driving a GUI goes
     /// back to inactive, clear its cache." One cache slot per id ⇒ one live instance per id
@@ -30,6 +30,15 @@ namespace TangledeepAccess.Ui
         private ControlId _lastSpoken;
         private object _pendingGameFocus;
 
+        /// <summary>
+        /// True when the active overlay is a real navigable tree (more than one node), so our
+        /// key handling should capture input. False for no overlay or a degenerate single-node
+        /// tree (e.g. a game panel our generic mirror can't represent), so input falls through
+        /// to the game and we never strand the player. Updated each <see cref="Tick"/>; the
+        /// input hook reads it (one frame stale is fine for a persistent menu).
+        /// </summary>
+        public bool WantsInputCapture { get; private set; }
+
         /// <summary>Register a handler. The last one registered sits at the top of the stack.</summary>
         public void Register(OverlayHandler handler)
         {
@@ -38,8 +47,8 @@ namespace TangledeepAccess.Ui
 
         /// <summary>
         /// Record that the game moved focus to <paramref name="reference"/> (e.g. a
-        /// UIObject from the ChangeUIFocus hook). The next <see cref="Tick"/> tries to sync
-        /// our cursor to the matching node. Recorded off the pump; applied on it.
+        /// UIObject from the ChangeUIFocus hook). The next <see cref="Tick"/> with no nav
+        /// command syncs our cursor to the matching node. Recorded off the pump; applied on it.
         /// </summary>
         public void RecordGameFocus(object reference)
         {
@@ -47,20 +56,19 @@ namespace TangledeepAccess.Ui
         }
 
         /// <summary>
-        /// Run one frame. Returns the text to speak this tick, or null. The caller speaks it
-        /// (keeping the speak-from-the-pump rule). Must be called on the main thread because
-        /// overlay callbacks read live game state.
+        /// Run one frame, optionally applying a player navigation command. Returns what the
+        /// caller should speak / sound / focus this tick. Must be called on the main thread
+        /// because overlay callbacks read live game state.
         /// </summary>
-        public string Tick()
+        public TickResult Tick(NavCommand? command = null)
         {
             OverlayResult result = FindActive();
 
-            // Determine which id (if any) is active this tick.
             bool hasActive = result != null && result.Kind != OverlayResultKind.Inactive;
             OverlayId activeId = hasActive ? result.Id : default(OverlayId);
 
-            // Clear the cache of an id that was active last tick but is not active now (or
-            // was replaced by a different id). Sleeping keeps the id active, so no clear.
+            // Clear the cache of an id that was active last tick but is not active now (or was
+            // replaced). Sleeping keeps the id active, so no clear.
             if (_hasActiveLast && (!hasActive || !activeId.Equals(_activeLast)))
             {
                 _cache.Remove(_activeLast);
@@ -74,9 +82,12 @@ namespace TangledeepAccess.Ui
             _pendingGameFocus = null;
 
             if (!hasActive || result.Kind == OverlayResultKind.Sleeping)
-                return null;
+            {
+                WantsInputCapture = false;
+                return TickResult.Empty;
+            }
 
-            return BuildAndSpeak(result.Overlay, gameFocus);
+            return BuildAndProcess(result.Overlay, gameFocus, command);
         }
 
         private OverlayResult FindActive()
@@ -91,7 +102,11 @@ namespace TangledeepAccess.Ui
             return OverlayResult.Inactive;
         }
 
-        private string BuildAndSpeak(IUiOverlay overlay, object gameFocus)
+        private TickResult BuildAndProcess(
+            IUiOverlay overlay,
+            object gameFocus,
+            NavCommand? command
+        )
         {
             GraphState state;
             if (!_cache.TryGetValue(overlay.Id, out state))
@@ -104,33 +119,109 @@ namespace TangledeepAccess.Ui
             var ctx = new OverlayCtx(message, Modifiers.None);
             var graph = new KeyGraph(c => BuildRender(overlay, c), state);
 
-            // Build + reconcile focus into the new render.
             if (!graph.Rerender(ctx))
             {
                 // The overlay built nothing this tick — treat as closed and drop its cache.
                 _cache.Remove(overlay.Id);
                 _hasActiveLast = false;
                 _lastSpoken = null;
-                return null;
+                WantsInputCapture = false;
+                return TickResult.Empty;
             }
 
+            // We capture input only for a real navigable tree, never a degenerate one.
+            WantsInputCapture = graph.Current.Nodes.Count > 1;
+
+            if (command.HasValue)
+                return ApplyNav(graph, state, ctx, message, command.Value);
+
+            return Follow(graph, state, ctx, message, gameFocus);
+        }
+
+        private TickResult ApplyNav(
+            KeyGraph graph,
+            GraphState state,
+            OverlayCtx ctx,
+            MessageBuilder message,
+            NavCommand command
+        )
+        {
+            var result = new TickResult();
+
+            if (command == NavCommand.Activate)
+            {
+                ControlId cur = state.CurKey;
+                GraphNode node = null;
+                if (cur != null)
+                    graph.Current.Nodes.TryGetValue(cur, out node);
+                bool hasModHandler = node != null && node.Vtable.OnClick != null;
+
+                if (hasModHandler)
+                {
+                    // Mod-side control: run its handler; the game is not involved.
+                    graph.Click(ctx, Modifiers.None);
+                    result.Speak = message.Build();
+                }
+                else
+                {
+                    // Game-backed pass-through: let the caller confirm it through the game.
+                    result.Activated = true;
+                    result.FocusReference = cur?.Reference;
+                }
+
+                return result;
+            }
+
+            ControlId prev = state.CurKey;
+            graph.Move(ctx, ToDir(command));
+            ControlId now = state.CurKey;
+
+            result.Moved = prev == null || !prev.Equals(now);
+            result.FocusReference = now?.Reference;
+            result.Speak = message.Build();
+            _lastSpoken = now;
+            return result;
+        }
+
+        private TickResult Follow(
+            KeyGraph graph,
+            GraphState state,
+            OverlayCtx ctx,
+            MessageBuilder message,
+            object gameFocus
+        )
+        {
             // Sync to the game's focus if it moved (tier-1 reference match).
             if (gameFocus != null)
                 graph.FocusByReference(gameFocus);
 
-            // Speak only when the focused control actually changed (dedupe re-focus).
             ControlId cur = state.CurKey;
             if (cur == null || cur.Equals(_lastSpoken))
-                return null;
+                return TickResult.Empty;
 
             _lastSpoken = cur;
 
             GraphNode node;
             if (!graph.Current.Nodes.TryGetValue(cur, out node) || node.Vtable.Label == null)
-                return null;
+                return TickResult.Empty;
 
             node.Vtable.Label(ctx);
-            return message.Build();
+            return new TickResult { Speak = message.Build() };
+        }
+
+        private static GraphDir ToDir(NavCommand command)
+        {
+            switch (command)
+            {
+                case NavCommand.Up:
+                    return GraphDir.Up;
+                case NavCommand.Right:
+                    return GraphDir.Right;
+                case NavCommand.Down:
+                    return GraphDir.Down;
+                default:
+                    return GraphDir.Left;
+            }
         }
 
         private static GraphRender BuildRender(IUiOverlay overlay, OverlayCtx ctx)

@@ -5,7 +5,6 @@ using BepInEx;
 using HarmonyLib;
 using TangledeepAccess.Native;
 using TangledeepAccess.Overlays;
-using TangledeepAccess.Patches;
 using TangledeepAccess.Speech;
 using TangledeepAccess.Ui;
 using TangledeepAccess.Util;
@@ -52,7 +51,8 @@ namespace TangledeepAccess
             try
             {
                 _harmony = new Harmony(PluginGuid);
-                _harmony.PatchAll(typeof(UIManagerScript_ChangeUIFocus_Patch));
+                // Patch every annotated type in this assembly (focus chokepoint + in-game input).
+                _harmony.PatchAll(Assembly.GetExecutingAssembly());
                 Log.Info("Harmony patches applied");
             }
             catch (Exception e)
@@ -63,12 +63,30 @@ namespace TangledeepAccess
 
         private void Update()
         {
-            // Single per-frame pump: the dispatcher finds the active overlay, reconciles
-            // focus (including any game-driven focus change), and returns what to speak.
-            // Speaking stays here, never in a Harmony hook.
-            string toSpeak = _dispatcher.Tick();
-            if (!string.IsNullOrEmpty(toSpeak))
-                _speech?.Speak(toSpeak);
+            // Single per-frame pump. The input hook (TDInputHandler prefix) stashes a nav
+            // command; we apply it through the dispatcher, then carry out the game-side
+            // effects it asks for. Speaking and game calls stay here, never in a Harmony hook.
+            NavCommand? command = UiRuntime.ConsumePendingNav();
+            TickResult result = _dispatcher.Tick(command);
+
+            // We moved under our own navigation: follow the game's focus to match and play
+            // its move sound (the game didn't move it — we suppressed its input).
+            if (result.Moved && result.FocusReference is UIManagerScript.UIObject moveTarget)
+            {
+                UIManagerScript.ChangeUIFocusAndAlignCursor(moveTarget);
+                UIManagerScript.PlayCursorSound("Move");
+            }
+
+            // Player activated a game-backed control: confirm it through the game.
+            if (result.Activated)
+            {
+                if (result.FocusReference is UIManagerScript.UIObject confirmTarget)
+                    UIManagerScript.ChangeUIFocusAndAlignCursor(confirmTarget);
+                UIManagerScript.singletonUIMS?.CursorConfirm();
+            }
+
+            if (!string.IsNullOrEmpty(result.Speak))
+                _speech?.Speak(result.Speak);
         }
     }
 }
