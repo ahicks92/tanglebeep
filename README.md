@@ -44,7 +44,8 @@ Mod controls are chosen from keys the game's Default layout leaves unbound, so t
 not shadow any game action. Menus are navigated with the game's own keys; the mod just
 speaks them.
 
-- `K` — **Read here**: the hero's tile — map, coordinates, terrain, and any items on it.
+- `K` — **Read here**: the hero's tile — map, coordinates, terrain, any items on it, and the
+  open directions you can walk (its "exits").
 - `L` — **Scan**: everything in line of sight, by direction and distance (hostiles first,
   then nearest).
 - `Y` — **Status**: the hero's health, stamina, energy, level, and active (temporary) effects.

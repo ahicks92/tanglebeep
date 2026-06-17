@@ -161,6 +161,26 @@ namespace TangledeepAccess.Gameplay {
             message.ListItem();
             // The hero's own tile: terrain + items, not the hero actor.
             TileDescriber.Contents(message, tile, includeActor: false);
+            AppendExits(message, hero, pos);
+        }
+
+        // The 8 directions whose adjacent tile the hero could step into (not a wall/solid/blocked
+        // actor), so the player learns where they can walk in one key instead of probing each
+        // with the look cursor. +x east, +y north (the game's convention).
+        private static readonly (int Dx, int Dy)[] Compass8 = {
+            (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1),
+        };
+
+        private static void AppendExits(MessageBuilder message, HeroPC hero, Vector2 pos) {
+            var open = new List<string>();
+            foreach ((int dx, int dy) in Compass8) {
+                MapTileData adj = MapMasterScript.GetTile(new Vector2(pos.x + dx, pos.y + dy));
+                if (adj != null && !adj.IsCollidable(hero)) {
+                    open.Add(GridDirection.Compass(dx, dy));
+                }
+            }
+
+            message.ListItem(open.Count == 0 ? "no exits" : "exits: " + string.Join(", ", open));
         }
 
         // --- Scan ---
