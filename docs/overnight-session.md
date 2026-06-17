@@ -28,6 +28,9 @@ title screen into gameplay:
   item/ability name + full tooltip, via a hook on the ImpactUI column model.
 - **Ranged targeting** reads the target tile (contents, direction/distance, valid/invalid)
   as the aim cursor moves.
+- **Shops / NPCs** read end-to-end: talking reads the dialogue + choices; browsing a shop
+  reads each item's details and gold cost. The dev `/input` now drives in-game movement
+  (`step <dir>`, `wait`, `stairs`, `pickup`) so this is testable over HTTP.
 
 ## How to try it
 
@@ -45,10 +48,10 @@ this session and documented in `CLAUDE.md`.
 
 ## Known gaps / next (in rough priority)
 
-- **Shops / NPC interaction** not yet verified end-to-end (talk → buy). NPC dialogue should
-  read via DialogOverlay; shop item lists may need a hook. Blocked on driving in-game
-  movement over HTTP (the dev `/input` only covers menu nav), so it could not be exercised
-  in the safe town — verifying this is the top morning task.
+- **Combat** not exercised yet (no monsters in the safe town). The pieces are in place —
+  the game log speaks attacks (LOS-filtered), the scanner flags hostiles, targeting reads —
+  but a real fight (descend stairs to floor 1) should be played through to confirm.
+- **Inventory item actions** (use/equip/drop from the panel) not verified end to end.
 - **Custom name typing** in creation is deferred (default + RANDOM suffice).
 - Terrain is the coarse tile type ("ground"/"water"/"wall").
 
