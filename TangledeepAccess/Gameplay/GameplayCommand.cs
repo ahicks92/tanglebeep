@@ -11,5 +11,17 @@ namespace TangledeepAccess.Gameplay {
 
         /// <summary>Sweep everything in line of sight by direction and distance.</summary>
         Scan,
+
+        /// <summary>Toggle the look cursor (examine tiles without moving the hero).</summary>
+        LookToggle,
+
+        /// <summary>Re-center the look cursor on the hero.</summary>
+        LookRecenter,
+
+        // Step the look cursor one tile (only while it is active). +x east, +y north.
+        LookNorth,
+        LookSouth,
+        LookEast,
+        LookWest,
     }
 }

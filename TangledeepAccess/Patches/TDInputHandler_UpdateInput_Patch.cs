@@ -43,9 +43,10 @@ namespace TangledeepAccess.Patches {
             return false; // we handled it; suppress the game's input this frame
         }
 
-        // Mod gameplay hotkeys. K = read the current tile, L = scan everything in view. Chosen
-        // from letters the Default control layout leaves unbound (see docs/controls.md), so they
-        // never shadow a game action.
+        // Mod gameplay hotkeys, chosen from keys the Default control layout leaves unbound (see
+        // docs/controls.md) so they never shadow a game action: K = read the current tile, L =
+        // scan everything in view, ; = toggle the look cursor. While the look cursor is active it
+        // owns the arrow keys (stepping the cursor instead of the hero) and Home re-centers it.
         private static GameplayCommand? ReadGameplayKey() {
             if (Input.GetKeyDown(KeyCode.K)) {
                 return GameplayCommand.ReadHere;
@@ -53,6 +54,28 @@ namespace TangledeepAccess.Patches {
 
             if (Input.GetKeyDown(KeyCode.L)) {
                 return GameplayCommand.Scan;
+            }
+
+            if (Input.GetKeyDown(KeyCode.Semicolon)) {
+                return GameplayCommand.LookToggle;
+            }
+
+            if (LookCursor.Active) {
+                if (Input.GetKeyDown(KeyCode.Home)) {
+                    return GameplayCommand.LookRecenter;
+                }
+                if (Input.GetKeyDown(KeyCode.UpArrow)) {
+                    return GameplayCommand.LookNorth;
+                }
+                if (Input.GetKeyDown(KeyCode.DownArrow)) {
+                    return GameplayCommand.LookSouth;
+                }
+                if (Input.GetKeyDown(KeyCode.RightArrow)) {
+                    return GameplayCommand.LookEast;
+                }
+                if (Input.GetKeyDown(KeyCode.LeftArrow)) {
+                    return GameplayCommand.LookWest;
+                }
             }
 
             return null;

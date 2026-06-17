@@ -19,6 +19,21 @@ namespace TangledeepAccess.Gameplay {
                 return null;
             }
 
+            switch (command) {
+                case GameplayCommand.LookToggle:
+                    return LookCursor.Toggle();
+                case GameplayCommand.LookRecenter:
+                    return LookCursor.Recenter();
+                case GameplayCommand.LookNorth:
+                    return LookCursor.Move(0, 1);
+                case GameplayCommand.LookSouth:
+                    return LookCursor.Move(0, -1);
+                case GameplayCommand.LookEast:
+                    return LookCursor.Move(1, 0);
+                case GameplayCommand.LookWest:
+                    return LookCursor.Move(-1, 0);
+            }
+
             var message = new MessageBuilder();
             switch (command) {
                 case GameplayCommand.ReadHere:
@@ -42,10 +57,9 @@ namespace TangledeepAccess.Gameplay {
 
             message.Fragment(MapMasterScript.activeMap.GetName());
             message.ListItem(x + ", " + y);
-            if (tile != null) {
-                message.ListItem(Terrain(tile));
-                AppendItems(message, tile);
-            }
+            message.ListItem();
+            // The hero's own tile: terrain + items, not the hero actor.
+            TileDescriber.Contents(message, tile, includeActor: false);
         }
 
         // --- Scan ---
@@ -131,26 +145,6 @@ namespace TangledeepAccess.Gameplay {
 
             bool[,] visible = hero.visibleTilesArray;
             return visible != null && visible[(int)p.x, (int)p.y];
-        }
-
-        private static string Terrain(MapTileData tile) {
-            // The coarse tile type, spoken lowercase ("ground", "water", "wall"). A friendlier
-            // localized terrain name can replace this later.
-            return tile.tileType.ToString().ToLowerInvariant().Replace('_', ' ');
-        }
-
-        private static void AppendItems(MessageBuilder message, MapTileData tile) {
-            List<Item> items = tile.GetItemsInTile();
-            if (items == null) {
-                return;
-            }
-
-            foreach (Item item in items) {
-                string name = GameLabelReader.Clean(item.GetNameForUI());
-                if (name != null) {
-                    message.ListItem("item: " + name);
-                }
-            }
         }
 
         private struct Sighting {
