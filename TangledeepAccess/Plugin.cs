@@ -53,17 +53,17 @@ namespace TangledeepAccess {
                 }
             }
 
-            // Build the overlay system. Handlers are registered bottom-up: the generic
-            // game-focus fallback first (lowest priority), richer menu overlays later.
+            // Build the overlay system. Handlers are registered bottom-up: the unsupported-screen
+            // fallback first (lowest priority), richer menu overlays later.
             _dispatcher = new OverlayDispatcher();
             // One overlay per screen. Priority is reverse registration order (last wins). The
-            // generic mirror is the floor; in-game dialogue sits above it. TitleDialogOverlay is
+            // unsupported fallback is the floor; in-game dialogue sits above it. TitleDialogOverlay is
             // the catch-all for title dialogs, so the screen-specific title overlays (main menu,
             // feat select, save slots) are registered ABOVE it and win on their own screens. The
             // creation screens that are not dialogs (job grid, name entry, begin) claim distinct
             // stages and never collide. SaveSlot stays highest (its screen is a dialog box but
             // wants the bespoke slot reader).
-            _dispatcher.Register(new GenericGameFocusOverlay().Handler);
+            _dispatcher.Register(new UnsupportedOverlay().Handler);
             _dispatcher.Register(new DialogOverlay().Handler);          // in-game NPC dialogue
             _dispatcher.Register(new TitleDialogOverlay().Handler);     // title narrative dialogs (catch-all)
             _dispatcher.Register(new TitleMenuOverlay().Handler);       // TITLESCREEN menu

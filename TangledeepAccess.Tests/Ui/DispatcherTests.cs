@@ -22,7 +22,7 @@ namespace TangledeepAccess.Tests.Ui {
 
         [Fact]
         public void TopOfStackWins() {
-            var bottom = new RefOverlay(OverlayId.GenericGameFocus);
+            var bottom = new RefOverlay(OverlayId.Unsupported);
             bottom.Items.Add((new object(), "bottom"));
             var top = new RefOverlay(OverlayId.Inventory);
             top.Items.Add((new object(), "top"));
@@ -36,7 +36,7 @@ namespace TangledeepAccess.Tests.Ui {
 
         [Fact]
         public void InactiveHandlersAreSkipped() {
-            var overlay = new RefOverlay(OverlayId.GenericGameFocus);
+            var overlay = new RefOverlay(OverlayId.Unsupported);
             overlay.Items.Add((new object(), "generic"));
 
             var d = new OverlayDispatcher();

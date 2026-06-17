@@ -63,10 +63,11 @@ namespace TangledeepAccess.Ui {
         // --- Input ownership ---
 
         /// <summary>
-        /// Claim keyboard input for this overlay even if it has a single node. By default the
-        /// dispatcher captures input only for a multi-node tree; a modal control modeled as one
-        /// node (e.g. a Continue dialog we drive ourselves) calls this so a context-specific
-        /// input hook engages. Surfaced as the dispatcher's <c>CapturesInputExplicitly</c>.
+        /// Declare that this overlay owns keyboard input. The dispatcher captures input only for
+        /// overlays that call this — ownership is a declared property, not inferred from node
+        /// count, so an overlay either captures or it does not. Surfaced as the dispatcher's
+        /// <c>CapturesInput</c>, which both input hooks read. An overlay that does not call this
+        /// leaves input to the game and follows the game's focus (e.g. the save-slot screen).
         /// </summary>
         IOverlayBuilder CaptureInput();
     }

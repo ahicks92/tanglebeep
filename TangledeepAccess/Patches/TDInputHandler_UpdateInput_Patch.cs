@@ -38,18 +38,12 @@ namespace TangledeepAccess.Patches {
                 return true; // no menu, no mod key — game handles movement/actions
             }
 
+            // A menu is open: the shared arbiter decides own-or-passthrough. We do not suppress
+            // held keys — the game's in-game menu nav does not auto-repeat the way the title
+            // pump does.
             OverlayDispatcher dispatcher = UiRuntime.Dispatcher;
-            if (dispatcher == null || !dispatcher.WantsInputCapture) {
-                return true; // a menu is open but we have nothing to drive — let the game handle it
-            }
-
-            NavCommand? command = MenuInput.ReadNavKey();
-            if (!command.HasValue) {
-                return true; // unrecognized key — pass through to the game
-            }
-
-            UiRuntime.SetPendingNav(command.Value);
-            return false; // we handled it; suppress the game's input this frame
+            bool capturing = dispatcher != null && dispatcher.CapturesInput;
+            return MenuInput.RouteNav(capturing, suppressWhileHeld: false);
         }
 
         // Mod gameplay hotkeys, chosen from keys the Default control layout leaves unbound (see

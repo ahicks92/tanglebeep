@@ -4,8 +4,8 @@ namespace TangledeepAccess.Dev {
     /// we drive the game while its window is unfocused, where SendInput (needs foreground) and
     /// PostMessage (won't reach Rewired's raw input) don't work. Confirm routes through the
     /// game's single CursorConfirm dispatcher; directional moves walk the focused UIObject's
-    /// neighbor compass (the same orthogonal slots GameMenuMirror mirrors) via ChangeUIFocus,
-    /// which also trips the mod's focus hook so the move gets spoken.
+    /// 8-slot neighbor compass (orthogonal slots) via ChangeUIFocus, which also trips the mod's
+    /// focus hook so the move gets spoken.
     ///
     /// This covers the uiObjectFocus menu model (title, dialogs, most screens). In-game hero
     /// actions use the `step`/`wait`/`stairs`/`pickup` verbs, which commit a TurnData through
@@ -13,7 +13,7 @@ namespace TangledeepAccess.Dev {
     /// selection still has no verb (drive it via /eval OnSelectSlotConfirmPressed).
     /// </summary>
     internal static class InputInjector {
-        // UIObject.neighbors is an 8-slot compass; orthogonals only (matches GameMenuMirror).
+        // UIObject.neighbors is an 8-slot compass; orthogonals only.
         private const int Up = 0;
         private const int Right = 2;
         private const int Down = 4;

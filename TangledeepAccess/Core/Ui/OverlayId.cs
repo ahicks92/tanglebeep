@@ -10,9 +10,9 @@ namespace TangledeepAccess.Ui {
     /// single source of cache identity (do not invent ad-hoc string ids elsewhere).
     /// </summary>
     public enum OverlayId {
-        // The bottom-of-stack fallback: mirrors the game's current legacy UIObject neighbor
-        // graph as a tree and follows the game's focus. Subsumes the old FocusAnnouncer.
-        GenericGameFocus,
+        // The bottom-of-stack fallback for any legacy UIObject screen without a bespoke overlay:
+        // a single owned node that announces the screen is unsupported and captures input.
+        Unsupported,
 
         // Game menus (mirror Tangledeep). Add as their overlays are implemented.
         TitleMenu,

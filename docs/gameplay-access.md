@@ -15,12 +15,14 @@ topmost active overlay each frame, builds its control graph, reconciles focus, a
 Priority is **reverse registration order** (last registered wins). Current stack, low to
 high (`Plugin.Awake`):
 
-1. `GenericGameFocusOverlay` — the fallback. Mirrors whatever legacy `UIObject` graph the
-   game currently has focus in and reads each control's raw widget text. Covers any screen
-   without a bespoke overlay (including the shop and most full-screen panels' button names).
+1. `UnsupportedOverlay` — the fallback for any legacy `uiObjectFocus` screen without a
+   bespoke overlay. A single owned node that announces "Unsupported menu" and captures input
+   (navigation keys swallowed, others pass through so the player can back out). It does not
+   mirror the game's graph — that was rarely usable and was the only per-tick capture / focus
+   follower in the framework.
 2. `DialogOverlay` — the modal dialog box (NPC dialogue, story intros, yes/no prompts).
-   Above the generic mirror because a dialog is modal. Reads the body via the announcement
-   channel, then the choices.
+   Above the fallback because a dialog is modal. An owned vertical menu of the body plus one
+   node per choice (via `OwnedChoices`).
 3. `CharCreationOverlay` — the title-screen creation screens the generic/dialog readers
    handle poorly: the job grid (image-only buttons → full job readout), feat select (a
    dialog, so it outranks `DialogOverlay` for the `PERKSELECT` stage and reads each feat's

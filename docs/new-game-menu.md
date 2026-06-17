@@ -76,7 +76,7 @@ but items/abilities do), prefer the uniform `GetNameForUI()` +
 
 ## Implications for the overlay (next session)
 
-- `OverlayId.CharCreation` overlay, registered above `GenericGameFocus`.
+- `OverlayId.CharCreation` overlay, registered above the `Unsupported` fallback.
 - Handler: `Active` while `CharCreation.creationActive`. The only not-ready condition
   is a data-load gate, NOT a render gate: `GetJobDataByEnum` returns null while
   `GameMasterScript.masterJobList` is null (a narrow early/transition window; this is

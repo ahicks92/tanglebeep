@@ -99,21 +99,34 @@ namespace TangledeepAccess.Tests.Ui {
             Assert.False(r.Activated); // mod handled it; the game is not involved
         }
 
+        // An overlay that declares it owns input, with a single node.
+        private sealed class CaptureOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.JobGrid;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddLabel(ControlId.Structural("only"), ctx => ctx.Message.Fragment("only"));
+                builder.CaptureInput();
+            }
+        }
+
         [Fact]
-        public void WantsInputCaptureReflectsTreeSize() {
+        public void CapturesInputReflectsDeclarationNotNodeCount() {
+            // A multi-node overlay that does NOT declare capture: we do not own input. Node count
+            // no longer implies ownership.
             object a,
                 b;
             var twoItem = TwoItem(out a, out b);
             var d = new OverlayDispatcher();
             d.Register(() => OverlayResult.Active(twoItem));
             d.Tick();
-            Assert.True(d.WantsInputCapture);
+            Assert.False(d.CapturesInput);
 
-            var single = new ClickOverlay(() => { });
+            // A single-node overlay that calls CaptureInput() owns input.
+            var capturing = new CaptureOverlay();
             var d2 = new OverlayDispatcher();
-            d2.Register(() => OverlayResult.Active(single));
+            d2.Register(() => OverlayResult.Active(capturing));
             d2.Tick();
-            Assert.False(d2.WantsInputCapture); // single node => fall through to the game
+            Assert.True(d2.CapturesInput);
         }
 
         // One mod-side clickable node (has an OnClick handler).

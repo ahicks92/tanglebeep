@@ -12,12 +12,10 @@ namespace TangledeepAccess.Ui.Graph {
             new Dictionary<ControlId, GraphNode>();
 
         /// <summary>
-        /// The overlay explicitly wants to own keyboard input, even with a single node. The
-        /// dispatcher's default rule captures input only for a multi-node tree (a degenerate
-        /// single node is assumed unrepresentable and left to the game); a modal control we
-        /// deliberately model as one node (e.g. a Continue dialog) sets this to claim input
-        /// anyway. Surfaced separately as the dispatcher's <c>CapturesInputExplicitly</c> so a
-        /// context-specific input hook can engage only for opted-in overlays.
+        /// The overlay declared it owns keyboard input (via <c>CaptureInput</c>). The dispatcher
+        /// surfaces this as <c>CapturesInput</c>, which both input hooks read; an overlay that
+        /// does not set it leaves input to the game and follows game focus. Decided at build
+        /// time, never inferred from node count.
         /// </summary>
         public bool ForceCapture;
     }

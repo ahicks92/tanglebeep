@@ -30,22 +30,13 @@ namespace TangledeepAccess.Ui {
         private object _pendingGameFocus;
 
         /// <summary>
-        /// True when the active overlay is a real navigable tree (more than one node), so our
-        /// key handling should capture input. False for no overlay or a degenerate single-node
-        /// tree (e.g. a game panel our generic mirror can't represent), so input falls through
-        /// to the game and we never strand the player. Updated each <see cref="Tick"/>; the
-        /// input hook reads it (one frame stale is fine for a persistent menu).
+        /// True when the active overlay declared that it owns keyboard input, via
+        /// <see cref="IOverlayBuilder.CaptureInput"/>. A static property of the overlay, decided
+        /// at build time — not inferred from node count. Both input hooks (title and in-game)
+        /// read it to decide whether to route keys to us or leave them to the game. Updated each
+        /// <see cref="Tick"/>; one frame stale is fine for a persistent menu.
         /// </summary>
-        public bool WantsInputCapture { get; private set; }
-
-        /// <summary>
-        /// True when the active overlay explicitly opted into owning input via
-        /// <see cref="IOverlayBuilder.CaptureInput"/> (independent of node count). A
-        /// context-specific input hook (e.g. the title-screen pump) reads this to engage only
-        /// for opted-in overlays, leaving everything else on the game's own input. Updated each
-        /// <see cref="Tick"/>; one frame stale is fine for a persistent modal.
-        /// </summary>
-        public bool CapturesInputExplicitly { get; private set; }
+        public bool CapturesInput { get; private set; }
 
         /// <summary>Register a handler. The last one registered sits at the top of the stack.</summary>
         public void Register(OverlayHandler handler) {
@@ -86,8 +77,7 @@ namespace TangledeepAccess.Ui {
             _pendingGameFocus = null;
 
             if (!hasActive || result.Kind == OverlayResultKind.Sleeping) {
-                WantsInputCapture = false;
-                CapturesInputExplicitly = false;
+                CapturesInput = false;
                 return TickResult.Empty;
             }
 
@@ -124,7 +114,7 @@ namespace TangledeepAccess.Ui {
             var sb = new StringBuilder();
             sb.Append("overlay: ").Append(result.Id)
                 .Append(" (nodes=").Append(render.Nodes.Count)
-                .Append(", capturesInput=").Append(render.Nodes.Count > 1).Append(")\n");
+                .Append(", capturesInput=").Append(render.ForceCapture).Append(")\n");
             foreach (KeyValuePair<ControlId, GraphNode> kv in render.Nodes) {
                 bool isCurrent = current != null && current.Equals(kv.Key);
                 sb.Append(isCurrent ? "> " : "  ").Append('"').Append(labels[kv.Key] ?? "").Append('"');
@@ -178,26 +168,22 @@ namespace TangledeepAccess.Ui {
                 _cache.Remove(overlay.Id);
                 _hasActiveLast = false;
                 _lastSpoken = null;
-                WantsInputCapture = false;
-                CapturesInputExplicitly = false;
+                CapturesInput = false;
                 return TickResult.Empty;
             }
 
-            // Capture input for a real navigable tree, or whenever an overlay explicitly claims
-            // it (a single-node modal we drive ourselves, e.g. a Continue dialog).
-            CapturesInputExplicitly = graph.Current.ForceCapture;
-            WantsInputCapture = graph.Current.Nodes.Count > 1 || graph.Current.ForceCapture;
+            // Input ownership is what the overlay declared, not a function of node count.
+            CapturesInput = graph.Current.ForceCapture;
 
             if (command.HasValue) {
                 return ApplyNav(graph, state, ctx, message, command.Value);
             }
 
-            // An overlay that EXPLICITLY captures input (CaptureInput, i.e. ForceCapture) drives
-            // its own focus — its start node, then our nav — so it must not chase the game's
-            // focus, or a freshly-opened owned screen jumps off its start (e.g. a dialog's body
-            // node) onto whatever button the game had focused. Passive overlays — including
-            // multi-node ones like the job grid that merely satisfy the generic nodes>1 capture
-            // rule — must keep following the game's focus, or they fall silent after the first node.
+            // An overlay that captures input (CaptureInput, i.e. ForceCapture) drives its own
+            // focus — its start node, then our nav — so it must not chase the game's focus, or a
+            // freshly-opened owned screen jumps off its start (e.g. a dialog's body node) onto
+            // whatever button the game had focused. Non-capturing overlays (the save-slot screen)
+            // keep following the game's focus, since the game drives their navigation.
             return Follow(graph, state, ctx, message, graph.Current.ForceCapture ? null : gameFocus);
         }
 
