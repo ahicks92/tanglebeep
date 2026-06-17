@@ -122,7 +122,7 @@ namespace TangledeepAccess.Tests.Ui {
 
             public ClickOverlay(Action onClick) => _onClick = onClick;
 
-            public OverlayId Id => OverlayId.CharCreation;
+            public OverlayId Id => OverlayId.JobGrid;
 
             public void Build(IOverlayBuilder builder) {
                 builder.AddNode(
