@@ -56,6 +56,10 @@ namespace TangledeepAccess.Patches {
                 return GameplayCommand.Scan;
             }
 
+            if (Input.GetKeyDown(KeyCode.Y)) {
+                return GameplayCommand.ReadStatus;
+            }
+
             if (Input.GetKeyDown(KeyCode.Semicolon)) {
                 return GameplayCommand.LookToggle;
             }

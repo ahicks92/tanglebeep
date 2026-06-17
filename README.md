@@ -35,6 +35,7 @@ speaks them.
 - `K` — **Read here**: the hero's tile — map, coordinates, terrain, and any items on it.
 - `L` — **Scan**: everything in line of sight, by direction and distance (hostiles first,
   then nearest).
+- `Y` — **Status**: the hero's health, stamina, energy, level, and active (temporary) effects.
 - `;` — **Look cursor**: toggle a tile cursor for examining the map without moving. While
   it is on, the **arrow keys** step the cursor (each tile is read, respecting line of
   sight) and **Home** re-centers it on the hero; press `;` again to turn it off.

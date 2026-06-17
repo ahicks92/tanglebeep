@@ -12,6 +12,9 @@ namespace TangledeepAccess.Gameplay {
         /// <summary>Sweep everything in line of sight by direction and distance.</summary>
         Scan,
 
+        /// <summary>Read the hero's vitals: health, stamina, energy, level, active effects.</summary>
+        ReadStatus,
+
         /// <summary>Toggle the look cursor (examine tiles without moving the hero).</summary>
         LookToggle,
 

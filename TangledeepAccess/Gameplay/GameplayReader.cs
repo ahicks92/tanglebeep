@@ -42,9 +42,47 @@ namespace TangledeepAccess.Gameplay {
                 case GameplayCommand.Scan:
                     Scan(message, hero);
                     break;
+                case GameplayCommand.ReadStatus:
+                    ReadStatus(message, hero);
+                    break;
             }
 
             return message.Build();
+        }
+
+        // --- Status ---
+
+        private static void ReadStatus(MessageBuilder message, HeroPC hero) {
+            StatBlock stats = hero.myStats;
+            message.Fragment("Health " + Bar(stats, StatTypes.HEALTH));
+            message.ListItem("Stamina " + Bar(stats, StatTypes.STAMINA));
+            message.ListItem("Energy " + Bar(stats, StatTypes.ENERGY));
+            message.ListItem("Level " + stats.GetLevel());
+
+            foreach (StatusEffect status in stats.GetStatuses()) {
+                // Only HUD-visible statuses (temporary effects), not the permanent job/feat
+                // passives, which would otherwise be read every time.
+                if (status.showIcon) {
+                    message.ListItem((status.isPositive ? "" : "bad: ") + StatusName(status));
+                }
+            }
+        }
+
+        private static string Bar(StatBlock stats, StatTypes stat) {
+            int cur = (int)stats.GetStat(stat, StatDataTypes.CUR);
+            int max = (int)stats.GetStat(stat, StatDataTypes.MAX);
+            return cur + " of " + max;
+        }
+
+        // The game has no friendly status name at the refName key, so clean the ref itself
+        // ("status_toughness" -> "toughness"). A localized name can replace this when found.
+        private static string StatusName(StatusEffect status) {
+            string r = status.refName ?? "effect";
+            if (r.StartsWith("status_")) {
+                r = r.Substring("status_".Length);
+            }
+
+            return r.Replace('_', ' ');
         }
 
         // --- Read here ---
