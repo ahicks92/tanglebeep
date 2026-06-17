@@ -51,8 +51,16 @@ namespace TangledeepAccess {
             // Build the overlay system. Handlers are registered bottom-up: the generic
             // game-focus fallback first (lowest priority), richer menu overlays later.
             _dispatcher = new OverlayDispatcher();
+            // Priority is reverse registration order (last registered wins). Low to high:
+            // generic fallback < modal dialog < save-slot. Dialog is modal so it sits above the
+            // generic mirror; SaveSlot sits above Dialog because the save-slot screen is itself
+            // built on a dialog box (its header is dialog text) yet wants the bespoke slot
+            // reader — and SaveSlot only claims its exact stage, ceding to Dialog the instant a
+            // real confirmation pops (which moves CreateStage off SELECTSLOT).
             _dispatcher.Register(new GenericGameFocusOverlay().Handler);
-            _dispatcher.Register(new SaveSlotOverlay().Handler); // higher priority than generic
+            _dispatcher.Register(new CharCreationOverlay().Handler);
+            _dispatcher.Register(new DialogOverlay().Handler);
+            _dispatcher.Register(new SaveSlotOverlay().Handler);
             UiRuntime.Dispatcher = _dispatcher;
 
             try {
