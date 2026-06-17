@@ -37,8 +37,9 @@ speaks them.
   then nearest).
 - `Y` — **Status**: the hero's health, stamina, energy, level, and active (temporary) effects.
 - `;` — **Look cursor**: toggle a tile cursor for examining the map without moving. While
-  it is on, the **arrow keys** step the cursor (each tile is read, respecting line of
-  sight) and **Home** re-centers it on the hero; press `;` again to turn it off.
+  it is on, the **arrow keys** (and the **numpad**, including diagonals 7/9/1/3) step the
+  cursor — each tile is read, respecting line of sight — and **Home** re-centers it on the
+  hero; press `;` again to turn it off.
 
 (More gameplay controls — targeting support, a Factorio-style rescan refinement — are planned.)
 

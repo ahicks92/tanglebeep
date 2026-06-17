@@ -32,6 +32,14 @@ namespace TangledeepAccess.Gameplay {
                     return LookCursor.Move(1, 0);
                 case GameplayCommand.LookWest:
                     return LookCursor.Move(-1, 0);
+                case GameplayCommand.LookNortheast:
+                    return LookCursor.Move(1, 1);
+                case GameplayCommand.LookNorthwest:
+                    return LookCursor.Move(-1, 1);
+                case GameplayCommand.LookSoutheast:
+                    return LookCursor.Move(1, -1);
+                case GameplayCommand.LookSouthwest:
+                    return LookCursor.Move(-1, -1);
             }
 
             var message = new MessageBuilder();

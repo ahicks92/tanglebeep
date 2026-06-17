@@ -68,17 +68,31 @@ namespace TangledeepAccess.Patches {
                 if (Input.GetKeyDown(KeyCode.Home)) {
                     return GameplayCommand.LookRecenter;
                 }
-                if (Input.GetKeyDown(KeyCode.UpArrow)) {
+                // Arrows (orthogonal) and the numpad (orthogonal + diagonal), mirroring the
+                // game's own 8-direction movement keys so the cursor steps the same way.
+                if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Keypad8)) {
                     return GameplayCommand.LookNorth;
                 }
-                if (Input.GetKeyDown(KeyCode.DownArrow)) {
+                if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.Keypad2)) {
                     return GameplayCommand.LookSouth;
                 }
-                if (Input.GetKeyDown(KeyCode.RightArrow)) {
+                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.Keypad6)) {
                     return GameplayCommand.LookEast;
                 }
-                if (Input.GetKeyDown(KeyCode.LeftArrow)) {
+                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.Keypad4)) {
                     return GameplayCommand.LookWest;
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad9)) {
+                    return GameplayCommand.LookNortheast;
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad7)) {
+                    return GameplayCommand.LookNorthwest;
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad3)) {
+                    return GameplayCommand.LookSoutheast;
+                }
+                if (Input.GetKeyDown(KeyCode.Keypad1)) {
+                    return GameplayCommand.LookSouthwest;
                 }
             }
 

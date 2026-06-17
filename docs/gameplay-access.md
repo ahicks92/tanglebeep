@@ -109,7 +109,6 @@ keeps all game-state reads and speech on the main-thread pump and out of Harmony
 - Feat descriptions on the PERKSELECT screen are not yet read (only feat names) — see the
   task list. Feats are a dialog, so this needs `CharCreation` to handle PERKSELECT and
   outrank `DialogOverlay` for that stage.
-- The look cursor is 4-directional (orthogonal arrows); numpad diagonals are a natural
-  add. No targeting support yet (ranged abilities); planned, will reuse `GridDirection`
-  and the gameplay input layer.
+- No targeting support yet (ranged abilities); planned, will reuse `GridDirection` and the
+  gameplay input layer.
 - Custom name typing is deferred; the default name plus RANDOM make the screen completable.

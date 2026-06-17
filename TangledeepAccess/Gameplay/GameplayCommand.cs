@@ -26,5 +26,9 @@ namespace TangledeepAccess.Gameplay {
         LookSouth,
         LookEast,
         LookWest,
+        LookNortheast,
+        LookNorthwest,
+        LookSoutheast,
+        LookSouthwest,
     }
 }
