@@ -69,7 +69,7 @@ namespace TangledeepAccess.Overlays {
                 }
 
                 ControlId pageId = ControlId.ForObject(focus);
-                builder.AddLabel(pageId, ctx => Speak(ctx, GameLabelReader.ReadLabel(focus)));
+                builder.AddLabel(pageId, ctx => ctx.Message.Fragment(GameLabelReader.ReadLabel(focus)));
                 builder.SetStart(pageId);
                 return;
             }
@@ -83,7 +83,7 @@ namespace TangledeepAccess.Overlays {
 
             // The index in the structural key makes moving slots change the node => re-speak.
             ControlId slotId = ControlId.Structural("saveslot:" + block.slotIndex);
-            builder.AddLabel(slotId, ctx => Speak(ctx, ReadSlot(block)));
+            builder.AddLabel(slotId, ctx => ReadSlot(ctx.Message, block));
             builder.SetStart(slotId);
         }
 
@@ -104,15 +104,10 @@ namespace TangledeepAccess.Overlays {
             return block != null && LocalizedEver(block) && !block.bInfoIsDirty;
         }
 
-        private static void Speak(OverlayCtx ctx, string text) {
-            if (!string.IsNullOrEmpty(text)) {
-                ctx.Message.Fragment(text);
-            }
-        }
-
-        private static string ReadSlot(SaveDataDisplayBlock block) {
-            var message = new MessageBuilder();
-
+        // Appends straight into the context's message — no private MessageBuilder, no
+        // build-and-renest. The list-item boundaries here join with the rest of the spoken
+        // message under the one builder's separation discipline.
+        private static void ReadSlot(MessageBuilder message, SaveDataDisplayBlock block) {
             // The name field is "N. HeroName" for a populated slot; when hidden (empty / new)
             // lead with the bare slot number so the player knows which slot this is.
             string name = Field(block.txtName);
@@ -125,8 +120,6 @@ namespace TangledeepAccess.Overlays {
             AppendIfShown(message, block.txtNewCharacter);
             AppendIfShown(message, block.txtHeroesLost);
             AppendIfShown(message, block.txtCampaignDifficulty);
-
-            return message.Build();
         }
 
         private static void AppendIfShown(MessageBuilder message, TextMeshProUGUI field) {

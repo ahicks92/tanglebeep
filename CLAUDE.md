@@ -178,6 +178,15 @@ per frame from the pump.
   (`BuildHoverTextFromMonster`, `GetInformationForTooltip`, ...). Speak those; don't
   hardcode. Mod-authored strings go in one central place (for future translation), not
   inline literals.
+- **One MessageBuilder per spoken message — never nest.** Overlay control callbacks
+  receive the framework's builder as `ctx.Message`; append directly to it
+  (`ctx.Message.Fragment(...)`, `.ListItem(...)`). A helper that assembles several pieces
+  takes that same `MessageBuilder` as a parameter and appends to it. Do NOT `new
+  MessageBuilder()` inside a callback, `.Build()` it, and re-inject the string as a single
+  `Fragment` — that flattens the fragment/list-item separation discipline into one opaque
+  fragment and duplicates the builder lifecycle. The only code that constructs a builder
+  and calls `.Build()` is the dispatcher that owns the message (`OverlayDispatcher`); the
+  only other `new MessageBuilder()` is in tests.
 - **High-value hook target:** `GameLogScript` (`EnqueueEndOfTurnLogMessage`) is the
   centralized turn-by-turn event log — nearly every gameplay event flows through it as
   text. Piping it to speech is the biggest early win.
