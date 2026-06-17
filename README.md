@@ -5,8 +5,38 @@ to make the turn-based roguelike fully playable without vision. Speech is the
 primary interface, via [Prism](https://github.com/ethindp/prism) (a unified
 screen-reader/TTS abstraction) through a hand-written P/Invoke binding.
 
-Status: **bootstrap / hello-world.** The mod loads under BepInEx, brings up Prism,
-and speaks a startup line. Accessibility features are not built yet.
+Status: **early gameplay.** The full new-game flow is playable by ear — title menu,
+save-slot selection, the story intros, job selection, feat selection, and name entry
+all speak — and the mod drops you into the game and reads turn events, tiles, and a
+line-of-sight scan. See **Features** and **Controls** below; architecture notes are in
+`docs/`.
+
+## Features
+
+- **Spoken menus and dialogs.** A small overlay framework mirrors the game's menus and
+  speaks the focused control as the game moves focus. Modal dialog boxes (NPC dialogue,
+  the new-game story intros, yes/no prompts) read their full body text via a one-shot
+  "announcement" channel, then the choices.
+- **Character creation.** Save-slot panels, the image-only job buttons (each job's full
+  readout — description, difficulty, passive bonuses — is derived and spoken), and the
+  name-entry screen (prompt, current name, job/mode/feats summary; RANDOM re-reads the
+  new name) are all readable.
+- **Turn-by-turn game log.** Combat, status changes, pickups, and NPC barks are spoken as
+  they happen, filtered by the game's own line-of-sight and verbose-log settings.
+- **Tile reading and a scanner.** On demand, read the hero's tile or sweep everything in
+  line of sight by direction and distance (see Controls).
+
+## Controls
+
+Mod controls are chosen from keys the game's Default layout leaves unbound, so they do
+not shadow any game action. Menus are navigated with the game's own keys; the mod just
+speaks them.
+
+- `K` — **Read here**: the hero's tile — map, coordinates, terrain, and any items on it.
+- `L` — **Scan**: everything in line of sight, by direction and distance (hostiles first,
+  then nearest).
+
+(More gameplay controls — a look/examine cursor, targeting support — are planned.)
 
 ## Layout
 
