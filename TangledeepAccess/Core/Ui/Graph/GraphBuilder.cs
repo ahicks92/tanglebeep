@@ -39,6 +39,10 @@ namespace TangledeepAccess.Ui.Graph {
         private readonly List<RawEdge> _rawEdges = new List<RawEdge>();
         private ControlId _rawStart;
 
+        // One-shot announcement (orthogonal to either construction style).
+        private object _announceKey;
+        private Action<OverlayCtx> _announce;
+
         public IOverlayBuilder AddNode(ControlId id, NodeVtable vtable) {
             if (id == null) {
                 throw new ArgumentNullException(nameof(id));
@@ -125,6 +129,16 @@ namespace TangledeepAccess.Ui.Graph {
             return AddItem(id, new NodeVtable { Label = label });
         }
 
+        public IOverlayBuilder Announce(object key, Action<OverlayCtx> text) {
+            if (text == null) {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            _announceKey = key;
+            _announce = text;
+            return this;
+        }
+
         public IOverlayBuilder AddClickable(
             ControlId id,
             Action<OverlayCtx> label,
@@ -147,7 +161,13 @@ namespace TangledeepAccess.Ui.Graph {
                 );
             }
 
-            return hasRaw ? BuildRaw() : BuildMenu();
+            GraphRender render = hasRaw ? BuildRaw() : BuildMenu();
+            if (render != null && _announce != null) {
+                render.AnnounceKey = _announceKey;
+                render.Announce = _announce;
+            }
+
+            return render;
         }
 
         private GraphRender BuildRaw() {

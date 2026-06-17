@@ -10,6 +10,18 @@ namespace TangledeepAccess.Ui.Graph {
         public ControlId StartKey;
         public readonly Dictionary<ControlId, GraphNode> Nodes =
             new Dictionary<ControlId, GraphNode>();
+
+        /// <summary>
+        /// Optional one-shot announcement identity. When this value-equatable key changes
+        /// between ticks, the dispatcher speaks <see cref="Announce"/> once, prepended to
+        /// (and independent of) the focus label — so text that just appeared on screen
+        /// (dialog body, tutorial popup, level-up prompt) is read even when focus did not
+        /// move. Null means "no announcement this build."
+        /// </summary>
+        public object AnnounceKey;
+
+        /// <summary>Appends the announcement text to the message. Paired with <see cref="AnnounceKey"/>.</summary>
+        public System.Action<OverlayCtx> Announce;
     }
 
     /// <summary>
