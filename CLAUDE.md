@@ -130,14 +130,21 @@ Endpoints (loopback; drive with `curl`):
   to find where the mod is losing information.
 - `GET /screenshot` — captures the game framebuffer to a PNG and returns its path; `Read`
   that path to view it. Captures the game render (not the desktop) and works unfocused.
-- `POST /input` — body is a verb: `up|down|left|right|confirm`. Drives the game via its
-  **own** handlers (`UIManagerScript.singletonUIMS.CursorConfirm()`; the focused
-  `UIObject.neighbors` compass — orthogonals at slots 0/2/4/6 — via
-  `ChangeUIFocusAndAlignCursor`), **not** OS synthetic keys (which can't reach an unfocused
-  Rewired game). Injecting also trips the focus hook, so the move gets spoken — read it
-  back via `/speech`. Currently covers the `uiObjectFocus` menu model (title, dialogs).
-  **Save-slot selection and in-game hero movement use different paths and need their own
-  verbs — add them in `InputInjector` as you reach those screens.**
+- `POST /input` — body is a verb. Drives the game via its **own** handlers, **not** OS
+  synthetic keys (which can't reach an unfocused Rewired game). Injecting trips the focus
+  hook / game log, so results get spoken — read them back via `/speech`. Verbs:
+  - **Menu** (the `uiObjectFocus` model — title, dialogs, shops): `up|down|left|right`
+    walk the focused `UIObject.neighbors` compass (orthogonals at slots 0/2/4/6) via
+    `ChangeUIFocusAndAlignCursor`; `confirm` calls `CursorConfirm()`.
+  - **In-game hero actions** (gameplay): `step <dir>` where dir is `n|s|e|w|ne|nw|se|sw`
+    commits a one-tile `TurnData(MOVE)` through `GameMasterScript.TryNextTurn` — the game
+    resolves it as move / attack / NPC interaction, exactly like a keyboard step (so
+    stepping into a shopkeeper opens the shop, into a monster attacks). `wait` passes the
+    turn (`TurnTypes.PASS`); `stairs` calls `TravelManager.TryTravelStairs()`; `pickup`
+    calls `TileInteractions.TryPickupItemsInHeroTile()`. This is how you drive gameplay
+    (combat, shops, descent) over HTTP for testing.
+  - Save-slot selection still has no verb (drive it via `/eval`
+    `TitleScreenScript.titleScreenSingleton.OnSelectSlotConfirmPressed(idx)`).
 
 Iteration loop: edit → **kill the game** → `build.ps1` → `run-game.ps1` (background) →
 poll `/health` → `curl`.

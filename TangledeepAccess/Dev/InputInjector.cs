@@ -7,8 +7,10 @@ namespace TangledeepAccess.Dev {
     /// neighbor compass (the same orthogonal slots GameMenuMirror mirrors) via ChangeUIFocus,
     /// which also trips the mod's focus hook so the move gets spoken.
     ///
-    /// This covers the uiObjectFocus menu model (title, dialogs, most screens). Save-slot and
-    /// in-game movement have their own paths and will be added as verbs when needed.
+    /// This covers the uiObjectFocus menu model (title, dialogs, most screens). In-game hero
+    /// actions use the `step`/`wait`/`stairs`/`pickup` verbs, which commit a TurnData through
+    /// GameMasterScript.TryNextTurn (the game resolves move/attack/NPC-interaction). Save-slot
+    /// selection still has no verb (drive it via /eval OnSelectSlotConfirmPressed).
     /// </summary>
     internal static class InputInjector {
         // UIObject.neighbors is an 8-slot compass; orthogonals only (matches GameMenuMirror).
@@ -36,9 +38,92 @@ namespace TangledeepAccess.Dev {
                     return Move(Down, "down");
                 case "left":
                     return Move(Left, "left");
+                case "wait":
+                    return Turn(TurnTypes.PASS, UnityEngine.Vector2.zero, "wait");
+                case "stairs":
+                    return TravelManager.TryTravelStairs() ? "stairs -> traveling\n" : "stairs: none here\n";
+                case "pickup":
+                    return TileInteractions.TryPickupItemsInHeroTile() ? "pickup -> picked up\n" : "pickup: nothing here\n";
                 default:
-                    return "[unknown verb] '" + verb + "' - use up|down|left|right|confirm\n";
+                    string v = (verb ?? "").Trim().ToLowerInvariant();
+                    if (v.StartsWith("step")) {
+                        return Step(v.Substring(4).Trim());
+                    }
+
+                    return "[unknown verb] '" + verb
+                        + "' - menu: up|down|left|right|confirm; game: step <dir>|wait|stairs|pickup\n";
             }
+        }
+
+        // In-game hero action: a one-tile step that the game resolves as move / attack / NPC
+        // interaction, the same TurnData path the keyboard input commits. +x east, +y north.
+        private static string Step(string dir) {
+            UnityEngine.Vector2 off;
+            switch (dir) {
+                case "n":
+                case "north":
+                    off = new UnityEngine.Vector2(0, 1);
+                    break;
+                case "s":
+                case "south":
+                    off = new UnityEngine.Vector2(0, -1);
+                    break;
+                case "e":
+                case "east":
+                    off = new UnityEngine.Vector2(1, 0);
+                    break;
+                case "w":
+                case "west":
+                    off = new UnityEngine.Vector2(-1, 0);
+                    break;
+                case "ne":
+                case "northeast":
+                    off = new UnityEngine.Vector2(1, 1);
+                    break;
+                case "nw":
+                case "northwest":
+                    off = new UnityEngine.Vector2(-1, 1);
+                    break;
+                case "se":
+                case "southeast":
+                    off = new UnityEngine.Vector2(1, -1);
+                    break;
+                case "sw":
+                case "southwest":
+                    off = new UnityEngine.Vector2(-1, -1);
+                    break;
+                default:
+                    return "step: bad direction '" + dir + "' (n|s|e|w|ne|nw|se|sw)\n";
+            }
+
+            HeroPC hero = GameMasterScript.heroPCActor;
+            if (hero == null) {
+                return "step: no hero\n";
+            }
+
+            UnityEngine.Vector2 target = hero.GetPos() + off;
+            MapTileData tile = MapMasterScript.GetTile(target);
+            if (tile == null || tile.tileType == TileTypes.WALL) {
+                return "step " + dir + ": blocked\n";
+            }
+
+            return Turn(TurnTypes.MOVE, target, "step " + dir);
+        }
+
+        private static string Turn(TurnTypes type, UnityEngine.Vector2 newPosition, string name) {
+            HeroPC hero = GameMasterScript.heroPCActor;
+            if (hero == null || GameMasterScript.gmsSingleton == null) {
+                return name + ": not in game\n";
+            }
+
+            var turn = new TurnData { actorThatInitiatedTurn = hero };
+            turn.SetTurnType(type);
+            if (type == TurnTypes.MOVE) {
+                turn.newPosition = newPosition;
+            }
+
+            GameMasterScript.gmsSingleton.TryNextTurn(turn, newTurn: true);
+            return name + " -> turn taken\n";
         }
 
         private static string Move(int slot, string name) {
