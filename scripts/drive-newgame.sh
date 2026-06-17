@@ -30,7 +30,10 @@ curl -s --retry 90 --retry-connrefused --retry-delay 1 "$H/health" >/dev/null
 echo "title: waiting for ready"; wait_true "GameMasterScript.gmsSingleton != null && GameMasterScript.gmsSingleton.titleScreenGMS && UIManagerScript.uiObjectFocus != null"
 
 echo "new game"; post confirm; wait_stage SELECTSLOT; sleep 1
-echo "select slot 0"; ev 'TitleScreenScript.titleScreenSingleton.OnSelectSlotConfirmPressed(0);' >/dev/null
+# Pick the first EMPTY slot (earlier overnight runs auto-save in town, so slot 0 may be
+# occupied -> confirming it would prompt to overwrite instead of starting a fresh game).
+SLOT=$(ev 'var b=UIManagerScript.saveDataDisplayComponents; int pick=0; for(int i=0;i<b.Length;i++){ if(b[i].displayType==SaveDataDisplayBlock.ESaveDataDisplayType.empty_af){ pick=i; break; } } System.Console.Write(pick);')
+echo "select empty slot $SLOT"; ev "TitleScreenScript.titleScreenSingleton.OnSelectSlotConfirmPressed($SLOT);" >/dev/null
 
 echo "intros -> JOBSELECT"
 for _ in $(seq 1 14); do
