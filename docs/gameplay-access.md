@@ -173,8 +173,9 @@ interaction loop and dungeon combat were verified without a screen reader. See `
 
 ## Known gaps / next
 
-- Tile terrain is the coarse `tileType` ("ground", "water", "wall"); a friendlier localized
-  name and trap/hazard detail could replace it.
+- Tile terrain now names hazard/feature tags (lava, water, mud, electrified, laser, tree,
+  grass) ahead of the coarse `tileType`; trap *objects* are actors and read via the scanner /
+  hover. Remaining: localized terrain names and finer trap state.
 - Inventory item *actions* (use/equip/drop from the panel) read but are not verified end to
   end. Custom name typing in creation is deferred (default + RANDOM suffice).
 - Status names use the game's `abilityName`; a few exotic effects may still read tersely.
