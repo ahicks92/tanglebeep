@@ -23,14 +23,33 @@ namespace TangledeepAccess.Gameplay {
                 return;
             }
 
+            // GetHoverText returns the actor/feature on the tile, but for an item-only tile it
+            // returns the item's name — which AppendItems would then repeat. So when the hover
+            // is just one of the ground items, fall back to terrain and let AppendItems name the
+            // item once. A real monster/NPC/feature (hover not matching any item) is spoken.
             string actor = includeActor ? GameLabelReader.Clean(HoverInfoScript.GetHoverText(tile)) : null;
-            if (actor != null) {
+            if (actor != null && !IsGroundItemName(tile, actor)) {
                 message.Fragment(actor);
             } else {
                 message.Fragment(Terrain(tile));
             }
 
             AppendItems(message, tile);
+        }
+
+        private static bool IsGroundItemName(MapTileData tile, string text) {
+            List<Item> items = tile.GetItemsInTile();
+            if (items == null) {
+                return false;
+            }
+
+            foreach (Item item in items) {
+                if (text == GameLabelReader.Clean(item.GetNameForUI())) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
