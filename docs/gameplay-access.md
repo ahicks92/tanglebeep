@@ -102,6 +102,22 @@ command (`UiRuntime.SetPendingGameplay`); the pump runs it through `GameplayRead
 speaks — the same hook-requests / pump-executes split used for menu nav and the log, which
 keeps all game-state reads and speech on the main-thread pump and out of Harmony hooks.
 
+## Full-screen panels (inventory / equipment / skills / character sheet)
+
+These use the newer ImpactUI scrolling-column model, not the legacy `uiObjectFocus`
+neighbor graph the generic overlay mirrors, so the rich tooltip is invisible to the generic
+reader. A postfix on `ImpactUI_Base.OnColumnUpdateFocus` — the one base method every such
+panel raises on selection change — reads the selected button's `GetContainedData()` (an
+`ISelectableUIObject`: Item, Equipment, AbilityScript, JobAbility) and records `GetNameForUI`
++ `GetInformationForTooltip` into `PanelReader` for the pump to speak. The generic overlay
+still voices the button's *name* as focus lands (the column buttons' `myUIObject`s are in the
+legacy graph), so the hook strips the leading name from the tooltip to avoid a double — the
+player hears "name" then "detail". The hook does not capture input; the column drives its own
+arrow navigation, and this is a pure announce-on-change like the game log.
+
+Note: the game leaves `nameInputOpen`/`CreateStage` set after a game starts, so the
+character-creation overlay is gated to `titleScreenGMS` to avoid it shadowing in-game screens.
+
 ## Known gaps / next
 
 - Tile terrain is the coarse `tileType` ("ground", "water", "wall"); a friendlier localized

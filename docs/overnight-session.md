@@ -43,15 +43,13 @@ this session and documented in `CLAUDE.md`.
 - **Ranged targeting** (`PlayerInputTargetingManager`) has no spoken support yet — the
   next big gameplay piece; hard to test in the safe town (no monsters / maybe no ranged
   weapon), which is why it is not done yet.
-- **Full-screen panels** (inventory / equipment / skills / character sheet) use the newer
-  `ImpactUI` column model, not the legacy `uiObjectFocus` graph the generic mirror walks,
-  so they likely read poorly — a column-aware overlay is the other big area.
 - **Status names** are cleaned refNames, not localized; find the game's status-name source.
 - **Custom name typing** in creation is deferred (default + RANDOM suffice).
 - Terrain is the coarse tile type ("ground"/"water"/"wall").
 
 Done since the first checkpoint: feat descriptions + selection state, 8-directional look
-cursor, and movement auto-announce.
+cursor, movement auto-announce, full-screen panel reading (inventory/equipment/skills/char
+sheet via the ImpactUI column hook), and a title-screen gating fix for the creation overlay.
 
 ## Notes / decisions worth your eye
 
