@@ -54,7 +54,8 @@ speaks them.
 - `/` — **Help**: speak this list of mod commands.
 - `;` — **Look cursor**: toggle a tile cursor for examining the map without moving. While
   it is on, the **arrow keys** (and the **numpad**, including diagonals 7/9/1/3) step the
-  cursor — each tile is read, respecting line of sight — and **Home** re-centers it on the
+  cursor — each tile is read, respecting line of sight — **`]`** / **`[`** jump it to the
+  next / previous thing in view (monster, item, stairs), and **Home** re-centers it on the
   hero; press `;` again to turn it off.
 
 Ranged targeting, shops/NPCs, movement feedback, and health warnings have no hotkey — they

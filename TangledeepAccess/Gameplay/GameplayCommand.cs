@@ -39,5 +39,9 @@ namespace TangledeepAccess.Gameplay {
         LookNorthwest,
         LookSoutheast,
         LookSouthwest,
+
+        // Jump the look cursor to the next/previous point of interest in view.
+        LookNextPoi,
+        LookPrevPoi,
     }
 }

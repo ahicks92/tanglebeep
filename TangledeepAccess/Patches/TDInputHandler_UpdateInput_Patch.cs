@@ -106,6 +106,13 @@ namespace TangledeepAccess.Patches {
                 if (Input.GetKeyDown(KeyCode.Keypad1)) {
                     return GameplayCommand.LookSouthwest;
                 }
+                // Jump the cursor through points of interest (next/previous).
+                if (Input.GetKeyDown(KeyCode.RightBracket)) {
+                    return GameplayCommand.LookNextPoi;
+                }
+                if (Input.GetKeyDown(KeyCode.LeftBracket)) {
+                    return GameplayCommand.LookPrevPoi;
+                }
             }
 
             return null;

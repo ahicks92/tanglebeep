@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TangledeepAccess.Speech;
 using UnityEngine;
 
@@ -66,6 +67,43 @@ namespace TangledeepAccess.Gameplay {
 
             _x = nx;
             _y = ny;
+            Describe(message, hero);
+            return message.Build();
+        }
+
+        /// <summary>
+        /// Jump the cursor to the next (<paramref name="dir"/> +1) or previous (-1) point of
+        /// interest in line of sight, nearest-first, wrapping. Lets the player tour visible
+        /// actors and items without stepping tile by tile (the Factorio-Access cursor model).
+        /// </summary>
+        public static string JumpToPoi(int dir) {
+            HeroPC hero = GameMasterScript.heroPCActor;
+            if (!Active || hero == null || MapMasterScript.activeMap == null) {
+                return null;
+            }
+
+            List<Poi> pois = Surroundings.CollectVisible(hero);
+            if (pois.Count == 0) {
+                return "nothing in view";
+            }
+
+            pois.Sort((a, b) => a.Steps - b.Steps);
+
+            // Where is the cursor now in that order? -1 if not on a POI.
+            int current = -1;
+            for (int i = 0; i < pois.Count; i++) {
+                if ((int)pois[i].Pos.x == _x && (int)pois[i].Pos.y == _y) {
+                    current = i;
+                    break;
+                }
+            }
+
+            // From "nowhere", forward starts at the nearest, backward at the farthest.
+            int next = current < 0 ? (dir > 0 ? 0 : pois.Count - 1) : (current + dir + pois.Count) % pois.Count;
+            _x = (int)pois[next].Pos.x;
+            _y = (int)pois[next].Pos.y;
+
+            var message = new MessageBuilder();
             Describe(message, hero);
             return message.Build();
         }

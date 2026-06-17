@@ -20,8 +20,8 @@ namespace TangledeepAccess.Gameplay {
             if (command == GameplayCommand.Help) {
                 return "Tangledeep Access commands. K, read here and exits. "
                     + "L, scan in view. Y, status. A, hotbar. Semicolon, look cursor; "
-                    + "then arrows or numpad to move it, Home to recenter. Apostrophe, repeat. "
-                    + "Slash, this help.";
+                    + "then arrows or numpad to move it, brackets to jump between things in view, "
+                    + "Home to recenter. Apostrophe, repeat. Slash, this help.";
             }
 
             HeroPC hero = GameMasterScript.heroPCActor;
@@ -50,6 +50,10 @@ namespace TangledeepAccess.Gameplay {
                     return LookCursor.Move(1, -1);
                 case GameplayCommand.LookSouthwest:
                     return LookCursor.Move(-1, -1);
+                case GameplayCommand.LookNextPoi:
+                    return LookCursor.JumpToPoi(1);
+                case GameplayCommand.LookPrevPoi:
+                    return LookCursor.JumpToPoi(-1);
             }
 
             var message = new MessageBuilder();
@@ -196,31 +200,7 @@ namespace TangledeepAccess.Gameplay {
 
         private static void Scan(MessageBuilder message, HeroPC hero) {
             Vector2 hp = hero.GetPos();
-            var found = new List<Sighting>();
-            // Some pickups (e.g. food) appear both as an actor and as a tile item; dedupe by
-            // name + tile so the same thing is not announced twice.
-            var seen = new HashSet<string>();
-
-            // Actors (NPCs, monsters, stairs, destructibles) currently in line of sight.
-            foreach (Actor actor in MapMasterScript.activeMap.actorsInMap) {
-                if (actor == null || actor == hero) {
-                    continue;
-                }
-
-                Vector2 p = actor.GetPos();
-                if (!IsVisible(hero, p)) {
-                    continue;
-                }
-
-                string name = GameLabelReader.Clean(actor.displayName);
-                if (name != null && seen.Add(Key(name, p))) {
-                    found.Add(Sighting.Make(name, actor.actorfaction == Faction.ENEMY, hp, p));
-                }
-            }
-
-            // Ground items on visible tiles.
-            CollectGroundItems(hero, hp, found, seen);
-
+            List<Poi> found = Surroundings.CollectVisible(hero);
             if (found.Count == 0) {
                 message.Fragment("Nothing in view.");
                 return;
@@ -230,68 +210,10 @@ namespace TangledeepAccess.Gameplay {
             found.Sort((a, b) => a.Hostile != b.Hostile ? (a.Hostile ? -1 : 1) : a.Steps - b.Steps);
 
             message.Fragment(found.Count + (found.Count == 1 ? " thing in view" : " things in view"));
-            foreach (Sighting s in found) {
-                message.ListItem(s.Name);
-                message.Fragment(s.Hostile ? "(hostile)" : null);
-                message.Fragment(s.Offset);
-            }
-        }
-
-        private static void CollectGroundItems(HeroPC hero, Vector2 hp, List<Sighting> found, HashSet<string> seen) {
-            Map map = MapMasterScript.activeMap;
-            for (int x = 0; x < map.columns; x++) {
-                for (int y = 0; y < map.rows; y++) {
-                    if (!hero.visibleTilesArray[x, y]) {
-                        continue;
-                    }
-
-                    MapTileData tile = map.GetTile(x, y);
-                    List<Item> items = tile?.GetItemsInTile();
-                    if (items == null) {
-                        continue;
-                    }
-
-                    var at = new Vector2(x, y);
-                    foreach (Item item in items) {
-                        string name = GameLabelReader.Clean(item.GetNameForUI());
-                        if (name != null && seen.Add(Key(name, at))) {
-                            found.Add(Sighting.Make("item: " + name, false, hp, at));
-                        }
-                    }
-                }
-            }
-        }
-
-        private static string Key(string name, Vector2 pos) {
-            return name + "@" + (int)pos.x + "," + (int)pos.y;
-        }
-
-        // --- Helpers ---
-
-        private static bool IsVisible(HeroPC hero, Vector2 p) {
-            if (!MapMasterScript.InBounds(p)) {
-                return false;
-            }
-
-            bool[,] visible = hero.visibleTilesArray;
-            return visible != null && visible[(int)p.x, (int)p.y];
-        }
-
-        private struct Sighting {
-            public string Name;
-            public bool Hostile;
-            public int Steps;
-            public string Offset;
-
-            public static Sighting Make(string name, bool hostile, Vector2 from, Vector2 to) {
-                int dx = (int)to.x - (int)from.x;
-                int dy = (int)to.y - (int)from.y;
-                return new Sighting {
-                    Name = name,
-                    Hostile = hostile,
-                    Steps = GridDirection.Steps(dx, dy),
-                    Offset = GridDirection.Offset(dx, dy),
-                };
+            foreach (Poi p in found) {
+                message.ListItem(p.Name);
+                message.Fragment(p.Hostile ? "(hostile)" : null);
+                message.Fragment(GridDirection.Offset((int)p.Pos.x - (int)hp.x, (int)p.Pos.y - (int)hp.y));
             }
         }
     }
