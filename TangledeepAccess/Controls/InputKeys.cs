@@ -44,8 +44,38 @@ namespace TangledeepAccess.Controls {
         }
 
         /// <summary>
-        /// Free-play query hotkeys, live in both Gameplay and Look: K read here, L scan, Y status,
-        /// A hotbar, apostrophe repeat, slash help, semicolon toggle the look cursor.
+        /// True while any look-cursor directional (arrows or numpad 1-9 less 5) is held — not just
+        /// the key-down frame. Lets the look drainer keep suppressing a held movement key on its
+        /// repeat frames so it cannot leak to the game and walk the hero alongside the cursor.
+        /// </summary>
+        public static bool AnyLookDirectionalHeld() {
+            return Input.GetKey(KeyCode.UpArrow)
+                || Input.GetKey(KeyCode.DownArrow)
+                || Input.GetKey(KeyCode.LeftArrow)
+                || Input.GetKey(KeyCode.RightArrow)
+                || Input.GetKey(KeyCode.Keypad1)
+                || Input.GetKey(KeyCode.Keypad2)
+                || Input.GetKey(KeyCode.Keypad3)
+                || Input.GetKey(KeyCode.Keypad4)
+                || Input.GetKey(KeyCode.Keypad6)
+                || Input.GetKey(KeyCode.Keypad7)
+                || Input.GetKey(KeyCode.Keypad8)
+                || Input.GetKey(KeyCode.Keypad9);
+        }
+
+        /// <summary>Semicolon toggles the look cursor. The look drainer claims it in both states —
+        /// off to turn on, on to turn off — so the cursor owns its whole lifecycle.</summary>
+        public static ModInputAction? LookToggle() {
+            if (Input.GetKeyDown(KeyCode.Semicolon)) {
+                return ModInputAction.Of(ModInputKind.LookToggle);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Free-play query hotkeys, the gameplay drainer's set: K read here, L scan, Y status,
+        /// A hotbar, apostrophe repeat, slash help.
         /// </summary>
         public static ModInputAction? Query() {
             if (Input.GetKeyDown(KeyCode.K)) {
@@ -65,9 +95,6 @@ namespace TangledeepAccess.Controls {
             }
             if (Input.GetKeyDown(KeyCode.Slash)) {
                 return ModInputAction.Of(ModInputKind.Help);
-            }
-            if (Input.GetKeyDown(KeyCode.Semicolon)) {
-                return ModInputAction.Of(ModInputKind.LookToggle);
             }
 
             return null;

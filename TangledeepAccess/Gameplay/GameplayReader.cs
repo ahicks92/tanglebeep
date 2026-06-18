@@ -7,6 +7,38 @@ using UnityEngine;
 
 namespace TangledeepAccess.Gameplay {
     /// <summary>
+    /// Input for free play, the floor of the priority chain: our query hotkeys overlay the game's
+    /// own controls. We claim only our query keys and pass everything else (movement, the game's
+    /// hotkeys) straight through to the game. Realization defers to <see cref="GameplayReader"/>,
+    /// except repeat-last, which is handled here because it needs the speech instance's history.
+    /// </summary>
+    public sealed class GameplayInputDrainer : InputDrainer {
+        public static readonly GameplayInputDrainer Instance = new GameplayInputDrainer();
+
+        public override bool Claim(bool suppressWhileHeld) {
+            ModInputAction? action = InputKeys.Query();
+            if (action.HasValue) {
+                InputQueue.Enqueue(this, action.Value);
+                return true;
+            }
+
+            return false; // movement and game hotkeys are the game's
+        }
+
+        public override void Realize(ModInputAction action, PrismSpeech speech) {
+            if (action.Kind == ModInputKind.RepeatLast) {
+                speech.Speak(speech.LastSpoken);
+                return;
+            }
+
+            string spoken = GameplayReader.Execute(action);
+            if (!string.IsNullOrEmpty(spoken)) {
+                speech.Speak(spoken);
+            }
+        }
+    }
+
+    /// <summary>
     /// Computes spoken answers to the player's on-demand spatial queries during gameplay:
     /// "read here" (the hero's tile) and "scan" (a Factorio-Access-style sweep of everything in
     /// view, by direction and distance). All reads re-query live game state at call time — no
@@ -15,10 +47,10 @@ namespace TangledeepAccess.Gameplay {
     /// </summary>
     internal static class GameplayReader {
         /// <summary>
-        /// Realize a free-play input action (the Look and Gameplay contexts), or null if not in
-        /// play. <see cref="ModInputKind.Move"/> here means a look-cursor step — the menu context's
-        /// Move never reaches us. <see cref="ModInputKind.RepeatLast"/> is handled in the pump (it
-        /// owns the speech instance) and never arrives here.
+        /// Compute the spoken answer for a free-play query, or null if not in play. The look cursor's
+        /// own keys — its toggle and movement — never reach here; <see cref="LookInputDrainer"/>
+        /// realizes those. This handles only the query hotkeys. Repeat-last is realized in
+        /// <see cref="GameplayInputDrainer"/>.
         /// </summary>
         public static string Execute(ModInputAction action) {
             // Help is static text and useful even mid-transition, so answer it before the
@@ -33,19 +65,6 @@ namespace TangledeepAccess.Gameplay {
             HeroPC hero = GameMasterScript.heroPCActor;
             if (hero == null || !GameMasterScript.actualGameStarted || MapMasterScript.activeMap == null) {
                 return null;
-            }
-
-            switch (action.Kind) {
-                case ModInputKind.LookToggle:
-                    return LookCursor.Toggle();
-                case ModInputKind.LookRecenter:
-                    return LookCursor.Recenter();
-                case ModInputKind.Move:
-                    return LookCursor.Move(action.Dx, action.Dy);
-                case ModInputKind.LookNextPoi:
-                    return LookCursor.JumpToPoi(1);
-                case ModInputKind.LookPrevPoi:
-                    return LookCursor.JumpToPoi(-1);
             }
 
             var message = new MessageBuilder();

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using BepInEx;
@@ -99,53 +100,25 @@ namespace TangledeepAccess {
                     + " ready. Press slash for a list of commands.");
             }
 
-            // Single per-frame pump. The active input handler (in the game's input pump) stashed the
-            // recognized input for this frame, tagged with its context; we realize it here. The
-            // overlay dispatcher ticks every frame regardless — even with no input — to follow the
-            // game's own menu focus, so we feed it only a Menu-context action. Speaking and game
-            // calls stay here, never in a Harmony hook.
-            PendingInput? pending = UiRuntime.ConsumePendingInput();
-            ModInputAction? menuAction = null;
-            if (pending.HasValue && pending.Value.Context == InputContext.Menu) {
-                menuAction = pending.Value.Action;
-            }
-
-            TickResult result = _dispatcher.Tick(menuAction);
-
-            // We moved under our own navigation: follow the game's focus to match and play
-            // its move sound (the game didn't move it — we suppressed its input).
-            if (result.Moved && result.FocusReference is UIManagerScript.UIObject moveTarget) {
-                UIManagerScript.ChangeUIFocusAndAlignCursor(moveTarget);
-                UIManagerScript.PlayCursorSound("Move");
-            }
-
-            // Player activated a game-backed control: confirm it through the game.
-            if (result.Activated) {
-                if (result.FocusReference is UIManagerScript.UIObject confirmTarget) {
-                    UIManagerScript.ChangeUIFocusAndAlignCursor(confirmTarget);
+            // Single per-frame pump. The input hook claimed this frame's input (in the game's input
+            // pump) and enqueued each event tagged with the drainer that claimed it; we drain and
+            // hand each straight back to that drainer to realize. Speaking and game calls happen in
+            // the drainers (off the pump's thread is never an issue — this is the Unity thread),
+            // never in a Harmony hook.
+            IReadOnlyList<PendingInput> input = InputQueue.Drain();
+            bool menuRealized = false;
+            foreach (PendingInput ev in input) {
+                ev.Source.Realize(ev.Action, _speech);
+                if (ev.Source == MenuInputDrainer.Instance) {
+                    menuRealized = true;
                 }
-
-                UIManagerScript.singletonUIMS?.CursorConfirm();
             }
 
-            if (!string.IsNullOrEmpty(result.Speak)) {
-                _speech?.Speak(result.Speak);
-            }
-
-            // Free-play input the look/gameplay hook recognized: look-cursor steps and on-demand
-            // spatial queries (read-here / scan). Explicit player queries interrupt, so the answer
-            // is immediate.
-            if (pending.HasValue && pending.Value.Context != InputContext.Menu) {
-                ModInputAction action = pending.Value.Action;
-                if (action.Kind == ModInputKind.RepeatLast) {
-                    // Re-speak the last phrase; handled here since the pump owns the speech instance.
-                    _speech?.Speak(_speech.LastSpoken);
-                } else {
-                    string spoken = GameplayReader.Execute(action);
-                    if (!string.IsNullOrEmpty(spoken)) {
-                        _speech?.Speak(spoken);
-                    }
-                }
+            // The overlay dispatcher must tick every frame even with no input — that is how it
+            // follows the game's own menu focus — so tick it idle on any frame the menu drainer
+            // did not already drive.
+            if (!menuRealized) {
+                MenuInputDrainer.Instance.IdleTick(_speech);
             }
 
             // Ranged-targeting cursor (aiming a ranged weapon / point ability), captured from the

@@ -1,8 +1,76 @@
 using System.Collections.Generic;
+using TangledeepAccess.Controls;
 using TangledeepAccess.Speech;
 using UnityEngine;
 
 namespace TangledeepAccess.Gameplay {
+    /// <summary>
+    /// Input for the look cursor, beside the cursor it drives — and the sole owner of the cursor's
+    /// whole lifecycle. While off it claims exactly one key, the toggle that turns it on, and passes
+    /// everything else through to free play. While on it owns the toggle (to turn off) plus the
+    /// cursor-movement set (step, recenter, jump-to-POI); every other key (our query hotkeys, the
+    /// game's own keys) still passes through, so they keep working while looking. The one subtlety:
+    /// a <em>held</em> directional has no key-down on its repeat frames, so we swallow it anyway, or
+    /// the repeat would leak to the game and walk the hero alongside the cursor. (Reading the cursor
+    /// tile with K is a free-play query that is already cursor-aware, so it lives in
+    /// <see cref="GameplayReader"/>, not here.)
+    /// </summary>
+    public sealed class LookInputDrainer : InputDrainer {
+        public static readonly LookInputDrainer Instance = new LookInputDrainer();
+
+        public override bool Claim(bool suppressWhileHeld) {
+            if (!LookCursor.Active) {
+                // Off: the only key we own is the one that turns us on.
+                ModInputAction? toggle = InputKeys.LookToggle();
+                if (toggle.HasValue) {
+                    InputQueue.Enqueue(this, toggle.Value);
+                    return true;
+                }
+
+                return false; // pass everything else to the chain below
+            }
+
+            // On: the toggle (to turn off) and our movement set; everything else passes through.
+            ModInputAction? action = InputKeys.LookToggle() ?? InputKeys.LookMove();
+            if (action.HasValue) {
+                InputQueue.Enqueue(this, action.Value);
+                return true;
+            }
+
+            // Swallow held directionals (no key-down this frame) so their repeat can't walk the
+            // hero; let anything else fall through to free play and the game.
+            return InputKeys.AnyLookDirectionalHeld();
+        }
+
+        public override void Realize(ModInputAction action, PrismSpeech speech) {
+            string spoken;
+            switch (action.Kind) {
+                case ModInputKind.LookToggle:
+                    spoken = LookCursor.Toggle();
+                    break;
+                case ModInputKind.Move:
+                    spoken = LookCursor.Move(action.Dx, action.Dy);
+                    break;
+                case ModInputKind.LookRecenter:
+                    spoken = LookCursor.Recenter();
+                    break;
+                case ModInputKind.LookNextPoi:
+                    spoken = LookCursor.JumpToPoi(1);
+                    break;
+                case ModInputKind.LookPrevPoi:
+                    spoken = LookCursor.JumpToPoi(-1);
+                    break;
+                default:
+                    spoken = null;
+                    break;
+            }
+
+            if (!string.IsNullOrEmpty(spoken)) {
+                speech.Speak(spoken);
+            }
+        }
+    }
+
     /// <summary>
     /// A discrete tile cursor for examining the map without moving the hero. Tangledeep's own
     /// Examine Mode is a smooth analog free-cursor (an icon nudged by a delta), which does not
