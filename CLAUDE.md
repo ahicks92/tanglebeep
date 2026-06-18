@@ -93,7 +93,7 @@ This project is greenfield and new. That means that committing to `main` is acce
     command and is safe — verified idempotent on the converted tree, and adding new
     braceless code then re-formatting solution-wide applies braces cleanly.
   - Rare escape hatch: the `Core/**` sources are `<Compile Include>`-linked into both
-    the net472 plugin and the net8 test project. `dotnet format` formats a linked file
+    the net472 plugin and the net472 test project. `dotnet format` formats a linked file
     once per project and, *if the two project contexts ever compute different output for
     it*, writes git conflict markers (`>>>>>>> After`) into the file instead of
     overwriting. This bit once during the initial cold Allman→1TBS bulk conversion and
@@ -188,12 +188,19 @@ The mod ships as **one managed assembly**. Two projects:
   Engine/native glue (`Plugin`, `LogBepInExBackend`) at the root; engine-agnostic code
   (Prism binding + speech wrapper, native loader, `Log` seam) under **`Core/`**, which
   compiles straight in. References game/BepInEx assemblies.
-- **`TangledeepAccess.Tests`** — net8 + xUnit. References no product DLL: it **links the
-  plugin's `Core/**` sources directly** (`<Compile Include>`) and tests them off-engine.
+- **`TangledeepAccess.Tests`** — **net472** + xUnit (same framework as the plugin, so the
+  linked Core sources are exercised against the exact BCL they ship on, not a net8
+  stand-in). References no product DLL: it **links the plugin's `Core/**` sources directly**
+  (`<Compile Include>`) and tests them off-engine. The test stack is pinned to
+  `Microsoft.NET.Test.Sdk` 17.6.3 + `xunit.runner.visualstudio` 2.4.5 on purpose: newer
+  adapter versions (2.5+/2.8) drag `Microsoft.Bcl.AsyncInterfaces` 6.0 → the `System.Runtime`
+  6.0.0.0 facade, which the SDK's net472 testhost can't bind, breaking `dotnet test`
+  discovery. If you bump these, re-run `test.ps1` and confirm tests are still *discovered*.
 
 **The `Core/` rule:** anything under `TangledeepAccess/Core/` must compile with only the
 BCL — no Unity, no BepInEx, no Harmony. The test build enforces this (those files are
-compiled on net8). Engine-touching code lives outside `Core/`. This is what keeps the
+compiled on net472, the plugin's own framework). Engine-touching code lives outside `Core/`.
+This is what keeps the
 single shipped DLL unit-testable without a second assembly. Internal types under `Core/`
 (e.g. `PrismNative`) are visible to tests because the sources compile into the test
 assembly — no `InternalsVisibleTo` needed. Put testable logic under `Core/`.
