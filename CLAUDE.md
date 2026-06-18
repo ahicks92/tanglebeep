@@ -74,12 +74,18 @@ outside `Core/`.
 - `setup-bepinex.ps1` — install vendored BepInEx into the game (once per install /
   after a game update wipes it).
 - `build.ps1` — build the plugin and deploy the single managed `TangledeepAccess.dll`
-  plus the native `prism.dll` into `<game>\BepInEx\plugins\TangledeepAccess\`.
+  plus the native `prism.dll` into `<game>\BepInEx\plugins\TangledeepAccess\`. `-NoBuild`
+  skips the build and just redeploys the last-built DLL. (Usually you don't call this
+  directly — `run-game.ps1` runs it for you; see below.)
 - `test.ps1` — offline xUnit suite (`dotnet test`), no game/Unity.
-- `run-game.ps1` — launch the game for iteration and **block until it exits** (run it as a
-  background task: a crash/quit then wakes you with the exit code). Sets `TANGLEDEEP_DEV=1`
-  to enable the dev driver (below). Relaunch to restart (it kills any leftover instance
-  first). **Kill the game before `build.ps1`** — a running game locks the deployed plugin DLL.
+- `run-game.ps1` — **builds + deploys the plugin, then** launches the game for iteration and
+  **blocks until it exits** (run it as a background task: a crash/quit then wakes you with the
+  exit code). The build runs *after* the kill-existing step (so the DLL is unlocked) and a
+  **build failure aborts the launch** — you never silently run a stale DLL. So the iteration
+  loop is just "restart `run-game.ps1`"; there is no separate build step to forget. Pass
+  **`-NoBuild`** to skip the build and launch whatever is already deployed (re-test the exact
+  binary, or restart from a clean state without recompiling). Sets `TANGLEDEEP_DEV=1` to enable
+  the dev driver (below). Relaunch to restart (it kills any leftover instance first).
   **Prism/NVDA is OFF by default** (`TANGLEDEEP_NO_SPEECH=1`) so headless/overnight runs don't
   depend on a screen reader; spoken text is still captured for `/speech`. Pass `-Speech` to
   voice through NVDA. **`-SaveSlot N`** takes you from cold launch to in-game in one command:
@@ -197,8 +203,9 @@ Endpoints (loopback; drive with `curl`):
   unaffected (they bypass the input gate via `TryNextTurn`).
 
 Iteration loop: edit → **kill the game** (cancel the `run-game.ps1` background task) →
-`build.ps1` → `run-game.ps1 -SaveSlot 0` (background; lands in-game on its own) → poll
-`/health` → `curl`. (Drop `-SaveSlot` to stop at the title; load later with `POST /loadsave`.)
+`run-game.ps1 -SaveSlot 0` (background; rebuilds, deploys, then lands in-game on its own) →
+poll `/health` → `curl`. The relaunch rebuilds for you, so there is no separate `build.ps1`
+step to forget. (Drop `-SaveSlot` to stop at the title; load later with `POST /loadsave`.)
 
 ## Architecture
 

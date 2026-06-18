@@ -8,12 +8,18 @@
 param(
     [switch]$Speech,
     [int]$SaveSlot = -1,
+    [switch]$NoBuild,
     [switch]$Help
 )
 
 if ($Help) {
-    Write-Host "Usage: .\run-game.ps1 [-Speech] [-SaveSlot N] [-Help]"
-    Write-Host "  Launches Tangledeep and blocks until it exits. Run as a background task."
+    Write-Host "Usage: .\run-game.ps1 [-Speech] [-SaveSlot N] [-NoBuild] [-Help]"
+    Write-Host "  Builds + deploys the plugin, then launches Tangledeep and blocks until it exits."
+    Write-Host "  Run as a background task. The build runs AFTER the old instance is killed (so the"
+    Write-Host "  plugin DLL is unlocked) and a build failure ABORTS the launch - you never run a"
+    Write-Host "  stale DLL by accident."
+    Write-Host "  -NoBuild: skip the build/deploy and launch whatever is already deployed (re-test"
+    Write-Host "  the exact same binary, or restart from a clean state without recompiling)."
     Write-Host "  Prism/NVDA speech is OFF by default (headless/overnight-safe); spoken text is"
     Write-Host "  still captured for the dev /speech endpoint. Pass -Speech to voice via NVDA."
     Write-Host "  -SaveSlot N: once the dev server answers, load save slot N (e.g. 0) so a single"
@@ -93,6 +99,36 @@ while ($true) {
         break
     }
     Start-Sleep -Milliseconds 250
+}
+
+# --- Build + deploy the plugin BEFORE launching ---------------------------
+# Folded in so "restart" implies "rebuild" (cargo-run muscle memory), killing the
+# recurring footgun of testing a stale deployed DLL. Order is load-bearing: the
+# kill-existing step above has already taken the old game down and waited for it to
+# release the plugin DLL, so the deploy's Copy-Item won't hit a locked file. A
+# build/deploy failure ABORTS the launch (release the lock, non-zero exit) rather
+# than falling through to run whatever stale binary is deployed - that silent-stale
+# case is the whole reason this exists. -NoBuild skips it to relaunch the exact
+# binary already deployed.
+if (-not $NoBuild) {
+    # build.ps1 signals failure two ways: an explicit `exit 1` (build error, game
+    # not found) leaves $LASTEXITCODE non-zero; a deploy Copy-Item against a still-
+    # locked DLL throws a terminating error (ErrorActionPreference=Stop). Catch both,
+    # release the lock, and abort - never fall through to launch a stale binary.
+    $buildOk = $false
+    try {
+        & "$PSScriptRoot\build.ps1"
+        $buildOk = ($LASTEXITCODE -eq 0)
+    } catch {
+        Write-Host "Build/deploy error: $_" -ForegroundColor Red
+    }
+    if (-not $buildOk) {
+        Write-Host "Build/deploy FAILED; NOT launching - the deployed DLL would be stale." -ForegroundColor Red
+        Remove-Item $LockFile -Force -ErrorAction SilentlyContinue
+        exit 1
+    }
+} else {
+    Write-Host "-NoBuild: launching the already-deployed plugin without rebuilding." -ForegroundColor Yellow
 }
 
 # Enable the in-process dev server (eval + speech tap) for this launch. Inherited
