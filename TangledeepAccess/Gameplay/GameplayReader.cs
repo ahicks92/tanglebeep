@@ -59,7 +59,8 @@ namespace TangledeepAccess.Gameplay {
                 return "Tangledeep Access commands. K, read here and surroundings. "
                     + "L, scan in view. Y, status. A, hotbar. Semicolon, look cursor; "
                     + "then arrows or numpad to move it, brackets to jump between things in view, "
-                    + "Home to recenter. Apostrophe, repeat. Slash, this help.";
+                    + "Home to recenter. Page up and page down, step scanner entries; control plus "
+                    + "page up or down, step scanner categories. Apostrophe, repeat. Slash, this help.";
             }
 
             HeroPC hero = GameMasterScript.heroPCActor;

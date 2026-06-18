@@ -12,12 +12,15 @@ namespace TangledeepAccess.Controls {
     /// policy that lives here.
     /// </summary>
     internal static class InputChain {
-        // ui → look → gameplay. The menu wins over the look cursor (a dialog opened mid-look still
-        // takes keys); the look cursor wins over free play (it owns its movement keys while active);
-        // free play is the floor (it claims only our query hotkeys, passing movement to the game).
+        // ui → look → scanner → gameplay. The menu wins over the look cursor (a dialog opened
+        // mid-look still takes keys); the look cursor wins over free play (it owns its movement keys
+        // while active); the scanner is modeless and claims only its own dedicated nav keys, so its
+        // position relative to look/gameplay does not matter; free play is the floor (it claims only
+        // our query hotkeys, passing movement to the game).
         private static readonly InputDrainer[] InGame = {
             MenuInputDrainer.Instance,
             LookInputDrainer.Instance,
+            ScannerInputDrainer.Instance,
             GameplayInputDrainer.Instance,
         };
 

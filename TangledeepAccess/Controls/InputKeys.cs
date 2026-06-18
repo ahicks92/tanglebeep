@@ -101,6 +101,34 @@ namespace TangledeepAccess.Controls {
         }
 
         /// <summary>
+        /// Scanner navigation, the scanner drainer's set — Factorio Access's Page Up/Down family:
+        /// plain Page Up/Down step between entries (Factorio's subcategory axis), Ctrl + Page Up/Down
+        /// step between categories. Shift + Page Up/Down is Factorio's instance axis, which we have
+        /// not built yet, so we leave it unclaimed (pass through) for now rather than swallow it. The
+        /// game binds Page Up/Down only to in-list paging, which never applies in free play, so
+        /// claiming them shadows nothing here. Modeless: the scanner keeps its selection between presses.
+        /// </summary>
+        public static ModInputAction? ScannerNav() {
+            bool up = Input.GetKeyDown(KeyCode.PageUp);
+            bool down = Input.GetKeyDown(KeyCode.PageDown);
+            if (!up && !down) {
+                return null;
+            }
+
+            // Shift is reserved for the future instance axis — leave it to the game until we build it.
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) {
+                return null;
+            }
+
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (ctrl) {
+                return ModInputAction.Of(up ? ModInputKind.ScanPrevCategory : ModInputKind.ScanNextCategory);
+            }
+
+            return ModInputAction.Of(up ? ModInputKind.ScanPrevEntry : ModInputKind.ScanNextEntry);
+        }
+
+        /// <summary>
         /// Look-cursor control, consulted only while the cursor is active: Home recenters, arrows
         /// and numpad step it (8-way, +x east +y north, mirroring the game's movement keys),
         /// brackets jump between points of interest in view.

@@ -30,6 +30,14 @@ namespace TangledeepAccess.Controls {
         LookRecenter,
         LookNextPoi,
         LookPrevPoi,
+
+        // Scanner: navigating the categorized, distance-sorted map readout. Two axes —
+        // category (the broad bucket) and entry (one feature within it). Modeless: the
+        // scanner keeps its selection between presses, no toggle.
+        ScanNextCategory,
+        ScanPrevCategory,
+        ScanNextEntry,
+        ScanPrevEntry,
     }
 
     /// <summary>
