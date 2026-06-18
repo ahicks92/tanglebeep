@@ -20,6 +20,18 @@ namespace TangledeepAccess.Gameplay {
         private static int _x;
         private static int _y;
 
+        /// <summary>The tile the cursor is on. Only meaningful while <see cref="Active"/>.</summary>
+        public static Vector2 Position => new Vector2(_x, _y);
+
+        /// <summary>
+        /// Append the focused tile's line-of-sight-gated description (visible contents, or "not
+        /// visible") plus its offset from the hero. Lets the read-here command reuse the cursor's
+        /// own LOS rule instead of re-reading a remote tile and leaking what the hero can't see.
+        /// </summary>
+        public static void Read(MessageBuilder message, HeroPC hero) {
+            Describe(message, hero);
+        }
+
         /// <summary>Toggle the cursor on (centered on the hero) or off. Returns what to speak.</summary>
         public static string Toggle() {
             HeroPC hero = GameMasterScript.heroPCActor;

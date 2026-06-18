@@ -24,7 +24,7 @@ namespace TangledeepAccess.Gameplay {
             // Help is static text and useful even mid-transition, so answer it before the
             // in-play gate.
             if (action.Kind == ModInputKind.Help) {
-                return "Tangledeep Access commands. K, read here and exits. "
+                return "Tangledeep Access commands. K, read here and surroundings. "
                     + "L, scan in view. Y, status. A, hotbar. Semicolon, look cursor; "
                     + "then arrows or numpad to move it, brackets to jump between things in view, "
                     + "Home to recenter. Apostrophe, repeat. Slash, this help.";
@@ -156,36 +156,67 @@ namespace TangledeepAccess.Gameplay {
         // --- Read here ---
 
         private static void ReadHere(MessageBuilder message, HeroPC hero) {
-            Vector2 pos = hero.GetPos();
+            // Read-here follows the look cursor when it is active, so K examines wherever the
+            // player has parked the cursor; otherwise it reads the hero's own tile.
+            bool atCursor = LookCursor.Active;
+            Vector2 pos = atCursor ? LookCursor.Position : hero.GetPos();
             int x = (int)pos.x;
             int y = (int)pos.y;
-            MapTileData tile = MapMasterScript.GetTile(pos);
 
             message.Fragment(MapMasterScript.activeMap.GetName());
             message.ListItem(x + ", " + y);
             message.ListItem();
-            // The hero's own tile: terrain + items, not the hero actor.
-            TileDescriber.Contents(message, tile, includeActor: false);
-            AppendExits(message, hero, pos);
-        }
-
-        // The 8 directions whose adjacent tile the hero could step into (not a wall/solid/blocked
-        // actor), so the player learns where they can walk in one key instead of probing each
-        // with the look cursor. +x east, +y north (the game's convention).
-        private static readonly (int Dx, int Dy)[] Compass8 = {
-            (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1), (-1, 0), (-1, 1),
-        };
-
-        private static void AppendExits(MessageBuilder message, HeroPC hero, Vector2 pos) {
-            var open = new List<string>();
-            foreach ((int dx, int dy) in Compass8) {
-                MapTileData adj = MapMasterScript.GetTile(new Vector2(pos.x + dx, pos.y + dy));
-                if (adj != null && !adj.IsCollidable(hero)) {
-                    open.Add(GridDirection.Compass(dx, dy));
-                }
+            if (atCursor) {
+                // Remote tile: defer to the cursor's own LOS-gated read (contents + offset).
+                LookCursor.Read(message, hero);
+            } else {
+                // The hero's own tile: terrain + items, not the hero actor.
+                TileDescriber.Contents(message, MapMasterScript.GetTile(pos), includeActor: false);
             }
 
-            message.ListItem(open.Count == 0 ? "no exits" : "exits: " + string.Join(", ", open));
+            AppendShape(message, pos);
+        }
+
+        /// <summary>
+        /// Append the shape of the surrounding walls — "north alcove", "vertical hallway", or, for
+        /// an unrecognized pattern, the wall directions — as a list item. Silent when every side
+        /// is open. The single place tile-surroundings are announced: classification lives in the
+        /// pure <see cref="TileShapes"/>; this only feeds it the eight passabilities.
+        /// </summary>
+        private static void AppendShape(MessageBuilder message, Vector2 pos) {
+            var passable = new bool[8];
+            for (int i = 0; i < TileShapes.DirectionsCW.Length; i++) {
+                (int dx, int dy) = TileShapes.DirectionsCW[i];
+                passable[i] = !IsWallForShape(new Vector2(pos.x + dx, pos.y + dy));
+            }
+
+            string phrase = TileShapes.Describe(passable).Speak();
+            if (phrase != null) {
+                message.ListItem(phrase);
+            }
+        }
+
+        // The shape is the static wall geometry around the hero, so a cell counts as a wall only
+        // when the *terrain* is impassable — the map edge, a wall/void tile, or solid terrain.
+        // Deliberately not actor-aware (a monster or NPC standing beside you must not reshape the
+        // room; those are reported by scan and the log) and not visibility-gated: we read the true
+        // geometry, so an adjacent tile hidden by the diagonal line-of-sight pinch still reads as
+        // the wall it is rather than a phantom exit. Diagonal pinches that survive map generation
+        // are walkable via corner-cutting, so an open diagonal is always a real exit.
+        private static bool IsWallForShape(Vector2 p) {
+            if (!MapMasterScript.InBounds(p)) {
+                return true;
+            }
+
+            MapTileData t = MapMasterScript.GetTile(p);
+            if (t == null) {
+                return true;
+            }
+
+            return t.tileType == TileTypes.WALL
+                || t.tileType == TileTypes.NOTHING
+                || t.tileType == TileTypes.MAPEDGE
+                || t.CheckTag(LocationTags.SOLIDTERRAIN);
         }
 
         // --- Scan ---

@@ -31,10 +31,36 @@ namespace TangledeepAccess.Gameplay {
             if (actor != null && !IsGroundItemName(tile, actor)) {
                 message.Fragment(actor);
             } else {
-                message.Fragment(Terrain(tile));
+                // No hover actor: a blocking object the game doesn't hover (a building/prop
+                // destructible like Nando's kitchen) still occupies the tile and matters to a
+                // player who can't see it, so name it instead of the terrain beneath it. Falls
+                // through to terrain when the tile is bare.
+                string obj = includeActor ? BlockingObjectName(tile) : null;
+                message.Fragment(obj ?? Terrain(tile));
             }
 
             AppendItems(message, tile);
+        }
+
+        // A collidable object the game's hover text ignores — chiefly non-targetable destructibles
+        // (decorative buildings and props). GetHoverText returns empty for them and GetTargetable
+        // is null, yet they block the tile, so we name them from the destructible's display name.
+        private static string BlockingObjectName(MapTileData tile) {
+            List<Actor> here = tile.GetAllTargetablePlusDestructibles();
+            if (here == null) {
+                return null;
+            }
+
+            foreach (Actor a in here) {
+                if (a.GetActorType() == ActorTypes.DESTRUCTIBLE) {
+                    string name = GameLabelReader.Clean(a.displayName);
+                    if (name != null) {
+                        return name;
+                    }
+                }
+            }
+
+            return null;
         }
 
         private static bool IsGroundItemName(MapTileData tile, string text) {
