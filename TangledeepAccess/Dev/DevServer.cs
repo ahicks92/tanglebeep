@@ -219,6 +219,16 @@ namespace TangledeepAccess.Dev {
                 if (ums == null) {
                     return "[no UIManagerScript] not on a screen that can start a load\n";
                 }
+                // The dev server answers /health a moment before the title screen finishes
+                // initializing. TitleScreenStart is what flips bReadyForMainMenuDialog and, in the
+                // same pass, allocates UIManagerScript.allUIObjects. Kicking the load before that
+                // runs leaves allUIObjects null, and the gameplay-scene dialog cursor alignment
+                // (AlignCursorPos -> SetCursorAsChildOfDialogBox) then throws on a null collection
+                // the first time any dialog opens. Wait for the main menu to be ready (the caller
+                // retries on a non-"loaded" response, so this just defers the kick).
+                if (!TitleScreenScript.bReadyForMainMenuDialog || UIManagerScript.allUIObjects == null) {
+                    return "[not ready] title screen still initializing; retry\n";
+                }
                 GameStartData.saveGameSlot = slot;
                 GameStartData.newGame = false;
                 GameMasterScript.gameLoadSequenceCompleted = false;
