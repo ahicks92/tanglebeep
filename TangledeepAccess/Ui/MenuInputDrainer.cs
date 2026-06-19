@@ -13,6 +13,10 @@ namespace TangledeepAccess.Ui {
         public static readonly MenuInputDrainer Instance = new MenuInputDrainer();
 
         public override bool Claim(bool suppressWhileHeld) {
+            if (TargetingActive()) {
+                return false; // targeting owns input; the overlay system stands down (see below)
+            }
+
             OverlayDispatcher dispatcher = UiRuntime.Dispatcher;
             bool capturing = dispatcher != null && dispatcher.CapturesInput;
             if (!capturing) {
@@ -43,7 +47,23 @@ namespace TangledeepAccess.Ui {
         /// changes. Called by the pump only when no menu event was realized this frame.
         /// </summary>
         public void IdleTick(PrismSpeech speech) {
+            if (TargetingActive()) {
+                return; // dormant during targeting — do not tick, capture, or speak
+            }
+
             TickAndAct(null, speech);
+        }
+
+        /// <summary>
+        /// True while the game is in ranged/ability targeting. The whole overlay system stands down
+        /// then: targeting is game-driven and narrated by <see cref="Gameplay.TargetingReader"/>, so
+        /// the menu drainer must neither capture input nor tick/speak. Without this, an overlay still
+        /// mid-close (its full-screen UI fading out, so it or the Unsupported fallback still reads as
+        /// "open") keeps capturing the arrow keys targeting needs, and can speak over the aim readout.
+        /// </summary>
+        private static bool TargetingActive() {
+            UIManagerScript ums = UIManagerScript.singletonUIMS;
+            return ums != null && ums.CheckTargeting();
         }
 
         // The dispatcher is BCL-only and cannot touch the engine, so it returns a TickResult and we

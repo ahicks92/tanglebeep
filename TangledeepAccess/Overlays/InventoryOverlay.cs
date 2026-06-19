@@ -30,9 +30,11 @@ namespace TangledeepAccess.Overlays {
     /// column of identical action cells would read "drop, drop, drop" with no item context. Action
     /// cells are still keyed by the item's <c>actorUniqueID</c> (the builder rejects duplicate ids).</para>
     ///
-    /// <para><b>Scope:</b> stats and item identity/info read for real; favorite and trash work
-    /// (toggle on the cell via Enter, or row-wide via the F / Minus keys). The sort buttons and the
-    /// use/eat and drop action cells are still labeled stubs that announce "not yet implemented".</para>
+    /// <para><b>Scope:</b> stats and item identity/info, favorite/trash (Enter on the cell or the
+    /// row-wide F / Minus keys), sort buttons, use/eat, and single-item drop all work. Two gaps
+    /// remain: dropping part of a <i>stack</i> needs the quantity-slider dialog we do not handle yet
+    /// (gated with a spoken notice), and using a <i>targeted</i> item hands off to the game's
+    /// targeting, which is only partially narrated until the targeting controller is built.</para>
     /// </summary>
     internal sealed class InventoryOverlay : IUiOverlay {
         // The complete filtered+sorted list backing the column; private on the column type.
@@ -50,7 +52,19 @@ namespace TangledeepAccess.Overlays {
         /// <summary>The live inventory screen if it is the open full-screen UI, else null.</summary>
         private static Switch_UIInventoryScreen Screen() {
             UIManagerScript ums = UIManagerScript.singletonUIMS;
-            if (ums == null || !(ums.currentFullScreenUI is Switch_UIInventoryScreen inv)) {
+            if (ums == null) {
+                return null;
+            }
+
+            // Targeting takes precedence: using a targeted item enters targeting synchronously while
+            // the inventory's close is still a pending fade, so currentFullScreenUI briefly remains
+            // this screen. Standing down here releases input to the game's targeting instead of
+            // fighting it for the arrow keys during that window.
+            if (ums.CheckTargeting()) {
+                return null;
+            }
+
+            if (!(ums.currentFullScreenUI is Switch_UIInventoryScreen inv)) {
                 return null;
             }
 
@@ -125,20 +139,30 @@ namespace TangledeepAccess.Overlays {
                 }
             );
 
-            AddSortStub(builder, "type", InventorySortTypes.ITEMTYPE);
-            AddSortStub(builder, "name", InventorySortTypes.ALPHA);
-            AddSortStub(builder, "value", InventorySortTypes.VALUE);
-            AddSortStub(builder, "rank", InventorySortTypes.RANK);
-            AddSortStub(builder, "rarity", InventorySortTypes.RARITY);
+            AddSortButton(builder, "type", InventorySortTypes.ITEMTYPE);
+            AddSortButton(builder, "name", InventorySortTypes.ALPHA);
+            AddSortButton(builder, "value", InventorySortTypes.VALUE);
+            AddSortButton(builder, "rank", InventorySortTypes.RANK);
+            AddSortButton(builder, "rarity", InventorySortTypes.RARITY);
 
             builder.EndRow();
         }
 
-        private static void AddSortStub(IOverlayBuilder builder, string word, InventorySortTypes sort) {
+        // Confirm runs the game's own SortPlayerInventory — same call as the game's sort button:
+        // it sorts the bag, plays the cue, flips direction when re-pressing the active sort, and
+        // refreshes the column (so our next rebuild reads the new order). We speak the resulting
+        // sort state. The cursor stays on the button (stable key).
+        private static void AddSortButton(IOverlayBuilder builder, string word, InventorySortTypes sort) {
             builder.AddClickable(
                 ControlId.Structural("inv:sortbtn:" + sort),
                 ctx => ctx.Message.Fragment("sort by " + word),
-                (ctx, mods) => ctx.Message.Fragment("sort by " + word + ", not yet implemented")
+                (ctx, mods) => {
+                    UIManagerScript.singletonUIMS.SortPlayerInventory((int)sort);
+                    ctx.Message.Fragment("sorted by " + SortName(Switch_UIInventoryScreen.lastSortType));
+                    if (!Switch_UIInventoryScreen.lastSortForward) {
+                        ctx.Message.Fragment("reversed");
+                    }
+                }
             );
         }
 
@@ -189,9 +213,8 @@ namespace TangledeepAccess.Overlays {
                     item,
                     new NodeVtable {
                         Label = ctx => ItemSummary(ctx.Message, item),
-                        // Confirm is the primary action players expect on an item (use / eat);
-                        // stubbed until item actions are wired.
-                        OnClick = (ctx, mods) => ctx.Message.Fragment(primary + ", not yet implemented"),
+                        // Confirm is the primary action players expect on an item (use / eat).
+                        OnClick = (ctx, mods) => UseItem(ctx, item),
                         // Read-info (K) is the tooltip. NOTE: GetInformationForTooltip /
                         // GetItemInformationNoName has a WRITE side effect — it clears the item's
                         // newlyPickedUp ("new") flag, which is saved state. That is precisely the
@@ -202,8 +225,24 @@ namespace TangledeepAccess.Overlays {
                     }
                 );
 
-                AddStubCell(builder, "inv:action:" + primary + ":" + uid, item, primary);
-                AddStubCell(builder, "inv:action:drop:" + uid, item, "drop");
+                AddRowCell(
+                    builder,
+                    ControlId.Structural("inv:action:" + primary + ":" + uid),
+                    item,
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment(primary),
+                        OnClick = (ctx, mods) => UseItem(ctx, item),
+                    }
+                );
+                AddRowCell(
+                    builder,
+                    ControlId.Structural("inv:action:drop:" + uid),
+                    item,
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment("drop"),
+                        OnClick = (ctx, mods) => DropItem(ctx, item),
+                    }
+                );
                 AddRowCell(
                     builder,
                     ControlId.Structural("inv:action:fav:" + uid),
@@ -253,17 +292,45 @@ namespace TangledeepAccess.Overlays {
             builder.AddItem(id, vtable);
         }
 
-        // A not-yet-implemented action cell (use/eat, drop) — still row-wide markable.
-        private static void AddStubCell(IOverlayBuilder builder, string key, Item item, string verb) {
-            AddRowCell(
-                builder,
-                ControlId.Structural(key),
-                item,
-                new NodeVtable {
-                    Label = ctx => ctx.Message.Fragment(verb),
-                    OnClick = (ctx, mods) => ctx.Message.Fragment(verb + ", not yet implemented"),
+        // Use (or eat) the item. Mirrors the game's submenu gating: food checks food-full, other
+        // consumables must be usable (valuables aren't). Then closes the inventory and runs the
+        // game's own use path — for a TARGETED item this enters targeting (a one-way exit from the
+        // inventory, matching vanilla; cancel returns to the map, not here). We speak nothing on
+        // success: the effect's own log lines and any targeting narration carry the feedback.
+        private static void UseItem(OverlayCtx ctx, Item item) {
+            if (item.IsItemFood()) {
+                if (GameMasterScript.heroPCActor.myStats.CheckHasStatusName("status_foodfull")) {
+                    UIManagerScript.PlayCursorSound("Error");
+                    ctx.Message.Fragment("too full to eat");
+                    return;
                 }
-            );
+            } else if (!item.CanBeUsed()) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment("can't use that");
+                return;
+            }
+
+            UIManagerScript.ForceCloseFullScreenUI();
+            GameMasterScript.gmsSingleton.PlayerUseConsumable(item as Consumable);
+        }
+
+        // Drop the item. A single item drops to the hero's tile and leaves the list (we stay in the
+        // inventory and rebuild). A stack would open the game's quantity-slider dialog, which we do
+        // not handle yet, so splitting a stack is gated until that framework piece lands.
+        private static void DropItem(OverlayCtx ctx, Item item) {
+            if (item is Consumable consumable && consumable.Quantity > 1) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment("can't drop part of a stack yet");
+                return;
+            }
+
+            string name = GameLabelReader.Clean(item.displayName);
+            UIManagerScript.DropItemFromSheet(item);
+            // DropItemFromSheet removes from the bag but does not refresh the screen's cached
+            // item list (the game's own drop path follows it with this). We read that cache, so
+            // without the refresh the dropped item lingers in our list.
+            UIManagerScript.UpdateFullScreenUIContent();
+            ctx.Message.Fragment("dropped").Fragment(name);
         }
 
         // Favorite and trash are mutually exclusive flags (setting one clears the other), and these
