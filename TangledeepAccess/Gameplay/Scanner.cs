@@ -12,7 +12,7 @@ namespace TangledeepAccess.Gameplay {
     /// guess pending real UX, and <see cref="Scanner.Categorize"/> is a single switch that is trivial
     /// to re-cut (e.g. splitting shops out of <see cref="Services"/> on <c>NPC.shopRef</c>). The order
     /// here is not the iteration order — that is <see cref="Scanner.Order"/> — and <see cref="Other"/>
-    /// is the unclassified fallback, deliberately left out of iteration so it is never surfaced.
+    /// is the catch-all for actor types we do not model, surfaced so the scan misses nothing.
     /// </summary>
     public enum ScanCategory {
         All,
@@ -119,8 +119,8 @@ namespace TangledeepAccess.Gameplay {
     /// minimap, which is a live view of the whole explored map.</para>
     /// </summary>
     internal static class Scanner {
-        // Iteration order for category navigation. All leads (the default); Other is omitted so
-        // unclassified actors never surface. This order is arbitrary and easy to change.
+        // Iteration order for category navigation. All leads (the default); Other trails as the
+        // catch-all for unmodeled actor types. This order is arbitrary and easy to change.
         private static readonly ScanCategory[] Order = {
             ScanCategory.All,
             ScanCategory.Monsters,
@@ -128,6 +128,7 @@ namespace TangledeepAccess.Gameplay {
             ScanCategory.Services,
             ScanCategory.Items,
             ScanCategory.Objects,
+            ScanCategory.Other,
         };
 
         // The held snapshot (null = never scanned yet) and the map it was taken on, so a level change
@@ -159,7 +160,7 @@ namespace TangledeepAccess.Gameplay {
                 case ActorTypes.DESTRUCTIBLE:
                     return ScanCategory.Objects;
                 default:
-                    return ScanCategory.Other; // HERO and anything unmodeled — never surfaced
+                    return ScanCategory.Other; // anything unmodeled — surfaced under the Other bucket
             }
         }
 
@@ -354,14 +355,9 @@ namespace TangledeepAccess.Gameplay {
                     continue;
                 }
 
-                ScanCategory cat = Categorize(a);
-                if (cat == ScanCategory.Other) {
-                    continue; // unclassified — never surfaced
-                }
-
                 list.Add(new ScanEntry {
                     ActorId = a.actorUniqueID,
-                    Category = cat,
+                    Category = Categorize(a), // Other (unmodeled types) is surfaced, not dropped
                     X = x,
                     Y = y,
                     Manhattan = Mathf.Abs(x - hx) + Mathf.Abs(y - hy),
