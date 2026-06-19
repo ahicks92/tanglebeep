@@ -36,6 +36,12 @@ namespace TangledeepAccess.Controls {
         VolumeSfx,
         VolumeFootsteps,
 
+        // Navigation aids (free play): a framework of audio cues on F-key slots, distinct from the
+        // spoken queries. Dx carries the aid index (F1 = 0, F2 = 1, …). Shift+Fn toggles an aid on
+        // or off; Ctrl+Fn fires it once without moving.
+        NavAidToggle,
+        NavAidTrigger,
+
         // Look-cursor control.
         LookToggle,
         LookRecenter,

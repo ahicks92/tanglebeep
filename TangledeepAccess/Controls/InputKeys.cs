@@ -124,6 +124,39 @@ namespace TangledeepAccess.Controls {
         }
 
         /// <summary>
+        /// Navigation-aid hotkeys, the gameplay drainer's set. Each aid sits on an F-key slot
+        /// (F1 = index 0 … F4 = 3): <b>Shift</b>+Fn toggles it on/off, <b>Ctrl</b>+Fn fires it once
+        /// without moving. The game binds only <i>bare</i> F-keys (F1 help, F2 UI page, F5-F8 weapons)
+        /// and never an F-key with a modifier, so claiming the modified combos shadows nothing; a bare
+        /// F-key returns null and stays the game's.
+        /// </summary>
+        public static ModInputAction? NavAids() {
+            int index;
+            if (Input.GetKeyDown(KeyCode.F1)) {
+                index = 0;
+            } else if (Input.GetKeyDown(KeyCode.F2)) {
+                index = 1;
+            } else if (Input.GetKeyDown(KeyCode.F3)) {
+                index = 2;
+            } else if (Input.GetKeyDown(KeyCode.F4)) {
+                index = 3;
+            } else {
+                return null;
+            }
+
+            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (shift) {
+                return new ModInputAction { Kind = ModInputKind.NavAidToggle, Dx = index };
+            }
+            if (ctrl) {
+                return new ModInputAction { Kind = ModInputKind.NavAidTrigger, Dx = index };
+            }
+
+            return null; // a bare F-key belongs to the game
+        }
+
+        /// <summary>
         /// Scanner navigation, the scanner drainer's set — Factorio Access's Page Up/Down family:
         /// plain Page Up/Down step between entries (Factorio's subcategory axis), Ctrl + Page Up/Down
         /// step between categories. Shift + Page Up/Down is Factorio's instance axis, which we have

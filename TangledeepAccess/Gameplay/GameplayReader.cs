@@ -16,7 +16,7 @@ namespace TangledeepAccess.Gameplay {
         public static readonly GameplayInputDrainer Instance = new GameplayInputDrainer();
 
         public override bool Claim(bool suppressWhileHeld) {
-            ModInputAction? action = InputKeys.Query() ?? InputKeys.Volume();
+            ModInputAction? action = InputKeys.Query() ?? InputKeys.Volume() ?? InputKeys.NavAids();
             if (action.HasValue) {
                 InputQueue.Enqueue(this, action.Value);
                 return true;
@@ -37,6 +37,16 @@ namespace TangledeepAccess.Gameplay {
                 || action.Kind == ModInputKind.VolumeSfx
                 || action.Kind == ModInputKind.VolumeFootsteps) {
                 speech.Speak(VolumeControl.Adjust(action));
+                return;
+            }
+
+            // Navigation aids. Toggle speaks its on/off confirmation; trigger is a pure-audio fire.
+            if (action.Kind == ModInputKind.NavAidToggle) {
+                speech.Speak(NavAids.Toggle(action.Dx));
+                return;
+            }
+            if (action.Kind == ModInputKind.NavAidTrigger) {
+                NavAids.FireNow(action.Dx);
                 return;
             }
 
@@ -70,6 +80,9 @@ namespace TangledeepAccess.Gameplay {
                     + "then arrows or numpad to move it, brackets to jump between things in view, "
                     + "Home to recenter. Page up and page down, step scanner entries; control plus "
                     + "page up or down, step scanner categories. "
+                    + "Navigation aids sit on F keys: shift plus an F key toggles an aid on or off, "
+                    + "control plus that F key fires it once without moving. F1 is wall echo, panned "
+                    + "tones for the nearest wall in each direction, on by default. "
                     + "F8, F9, F10, lower music, sound, footsteps volume; hold shift to raise. "
                     + "Apostrophe, repeat. Slash, this help.");
             }
@@ -234,19 +247,7 @@ namespace TangledeepAccess.Gameplay {
         // the wall it is rather than a phantom exit. Diagonal pinches that survive map generation
         // are walkable via corner-cutting, so an open diagonal is always a real exit.
         private static bool IsWallForShape(Vector2 p) {
-            if (!MapMasterScript.InBounds(p)) {
-                return true;
-            }
-
-            MapTileData t = MapMasterScript.GetTile(p);
-            if (t == null) {
-                return true;
-            }
-
-            return t.tileType == TileTypes.WALL
-                || t.tileType == TileTypes.NOTHING
-                || t.tileType == TileTypes.MAPEDGE
-                || t.CheckTag(LocationTags.SOLIDTERRAIN);
+            return TerrainQuery.IsImpassableWall(p);
         }
 
         // --- Scan ---
