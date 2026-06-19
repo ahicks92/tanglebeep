@@ -28,6 +28,11 @@ namespace TangledeepAccess.Ui.Graph {
         /// <summary>Optional. Read detailed info / tooltip about the control.</summary>
         public Action<OverlayCtx> OnReadInfo;
 
+        /// <summary>Optional. Read secondary info about the control (Ctrl+K) — a second read channel
+        /// beside <see cref="OnReadInfo"/>. The equipment sheet uses it for the item-vs-equipped
+        /// stat comparison.</summary>
+        public Action<OverlayCtx> OnReadSecondary;
+
         /// <summary>Optional. Read positional / coordinate info.</summary>
         public Action<OverlayCtx> OnReadCoords;
 

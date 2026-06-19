@@ -115,5 +115,71 @@ namespace TangledeepAccess.Speech {
         public static string ShowUnlearned(bool on) {
             return "show unlearned abilities, " + (on ? "on" : "off");
         }
+
+        // --- Equipment sheet -------------------------------------------------------------------
+
+        // Row anchors (the first cell of each row, naming what the row holds).
+        public const string EquippedGearRow = "equipped gear";
+        public const string GearBonusesRow = "gear bonuses";
+        public const string CategoryRow = "category";
+        public const string FilterRow = "filter";
+        public const string SortRow = "sort";
+        public const string ItemsRow = "items";
+
+        // Equipped-slot state words.
+        public const string EmptySlot = "empty";
+        public const string ActiveWeapon = "active";
+        public const string On = "on";
+        public const string Off = "off";
+
+        // Equipped-slot names. The four weapon-hotbar slots and the two accessory slots are numbered.
+        public static string WeaponSlot(int n) {
+            return "weapon " + n;
+        }
+
+        public const string OffhandSlot = "offhand";
+        public const string ArmorSlot = "armor";
+
+        public static string AccessorySlot(int n) {
+            return "accessory " + n;
+        }
+
+        public const string EmblemSlot = "emblem";
+
+        // Item-row action verbs.
+        public const string EquipAction = "equip";
+        public const string EquipOffhandAction = "equip offhand";
+
+        public static string EquipWeaponSlotAction(int n) {
+            return "equip to weapon " + n;
+        }
+
+        public static string EquipAccessoryAction(int n) {
+            return "equip accessory " + n;
+        }
+
+        public const string PairAction = "pair with main hand";
+        public const string UnpairAction = "unpair from main hand";
+        public const string DropAction = "drop";
+
+        // Item-row action results.
+        public const string Paired = "paired";
+        public const string Unpaired = "unpaired";
+        public const string CantEquip = "can't equip that";
+        public const string CantDrop = "can't drop that";
+        public const string Dropped = "dropped";
+        public const string Favorited = "favorited";
+        public const string NoLongerFavorite = "no longer favorite";
+        public const string MarkedTrash = "marked as trash";
+        public const string NoLongerTrash = "no longer trash";
+
+        // Comparison (Ctrl+K) on an item, against the gear it would replace.
+        public const string NothingToCompare = "nothing equipped to compare";
+        public const string NoDifference = "no change";
+
+        /// <summary>Prefix for an item comparison, e.g. "compared to Iron Sword".</summary>
+        public static string ComparedTo(string equippedName) {
+            return "compared to " + equippedName;
+        }
     }
 }

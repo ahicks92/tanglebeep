@@ -81,6 +81,7 @@ namespace TangledeepAccess {
             _dispatcher.Register(new SaveSlotOverlay().Handler);        // SELECTSLOT
             _dispatcher.Register(new InventoryOverlay().Handler);       // I tab, consumables
             _dispatcher.Register(new SkillSheetOverlay().Handler);      // J tab, skills (learn mode)
+            _dispatcher.Register(new EquipmentOverlay().Handler);       // E tab, gear
             UiRuntime.Dispatcher = _dispatcher;
 
             try {

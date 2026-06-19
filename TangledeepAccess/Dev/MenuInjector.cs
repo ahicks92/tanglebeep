@@ -58,6 +58,11 @@ namespace TangledeepAccess.Dev {
                 case "read":
                     action = ModInputAction.Of(ModInputKind.ReadInfo);
                     break;
+                case "readsecondary":
+                case "secondary":
+                case "compare":
+                    action = ModInputAction.Of(ModInputKind.ReadSecondary);
+                    break;
                 case "favorite":
                 case "fav":
                     action = ModInputAction.Of(ModInputKind.MarkFavorite);
@@ -77,7 +82,7 @@ namespace TangledeepAccess.Dev {
                     break;
                 default:
                     return "[unknown verb] '" + verb
-                        + "' - menu: up|down|left|right|confirm|readinfo|favorite|trash|1-8|cycle|hotbar\n";
+                        + "' - menu: up|down|left|right|confirm|readinfo|readsecondary|favorite|trash|1-8|cycle|hotbar\n";
             }
 
             OverlayDispatcher dispatcher = UiRuntime.Dispatcher;

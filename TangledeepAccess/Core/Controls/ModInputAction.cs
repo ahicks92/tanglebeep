@@ -21,6 +21,12 @@ namespace TangledeepAccess.Controls {
         /// game's hover tooltip. Distinct from Confirm, which is the primary action (use/equip).</summary>
         ReadInfo,
 
+        /// <summary>Read a control's <i>secondary</i> info (menus) — a second read channel beside
+        /// <see cref="ReadInfo"/>, on Ctrl+K. Its meaning is per-control: the equipment sheet uses it
+        /// to read an item's stat comparison against the equipped gear, cycling the compared slot on
+        /// repeat. Controls with no secondary read just re-read their label.</summary>
+        ReadSecondary,
+
         /// <summary>Toggle the focused control's "favorite" mark (menus). A toggle, not a one-way
         /// set — blind players expect the key to flip the state both ways.</summary>
         MarkFavorite,

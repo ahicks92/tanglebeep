@@ -31,7 +31,11 @@ namespace TangledeepAccess.Controls {
                 return ModInputAction.Of(ModInputKind.Confirm);
             }
             if (Input.GetKeyDown(KeyCode.K)) {
-                return ModInputAction.Of(ModInputKind.ReadInfo);
+                // Ctrl+K is the second read channel (e.g. the equipment sheet's item comparison);
+                // bare K is the primary tooltip read. The screen reader's Ctrl "stop" only silences
+                // speech, so the combo is free to claim while we own menu input.
+                bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                return ModInputAction.Of(ctrl ? ModInputKind.ReadSecondary : ModInputKind.ReadInfo);
             }
             if (Input.GetKeyDown(KeyCode.F)) {
                 return ModInputAction.Of(ModInputKind.MarkFavorite);

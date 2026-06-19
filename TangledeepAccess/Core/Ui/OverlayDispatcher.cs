@@ -27,6 +27,7 @@ namespace TangledeepAccess.Ui {
         private static readonly Dictionary<ModInputKind, Func<NodeVtable, Action<OverlayCtx>>> NodeActions =
             new Dictionary<ModInputKind, Func<NodeVtable, Action<OverlayCtx>>> {
                 { ModInputKind.ReadInfo, vt => vt.OnReadInfo },
+                { ModInputKind.ReadSecondary, vt => vt.OnReadSecondary },
                 { ModInputKind.MarkFavorite, vt => vt.OnMarkFavorite },
                 { ModInputKind.MarkTrash, vt => vt.OnMarkTrash },
                 { ModInputKind.AssignHotbar, vt => vt.OnAssignHotbar },
