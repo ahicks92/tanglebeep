@@ -12,6 +12,9 @@ namespace TangledeepAccess.Dev {
     /// run-game.ps1). Exposes a loopback HTTP server so an external driver can:
     ///   POST /eval         body = C# source, run against the live game (REPL state
     ///                      persists across calls); returns output + result/errors.
+    ///   POST /input        body = verb. Drives the GAME's own UIObject focus / hero turns.
+    ///   POST /menu         body = verb. Drives the MOD's overlay cursor (the InputQueue path),
+    ///                      the only way to test an overlay that captures input.
     ///   POST /loadsave     body = save slot index (default 0). Loads that slot from the
     ///                      title screen and BLOCKS until the gameplay scene is interactive.
     ///   GET  /speech?since=N   lines the mod has spoken since cursor N (we can't hear
@@ -125,6 +128,11 @@ namespace TangledeepAccess.Dev {
             if (route == "/input" && method == "POST") {
                 string verb = (body ?? "").Trim();
                 return OnMainThread(() => InputInjector.Inject(verb));
+            }
+
+            if (route == "/menu" && method == "POST") {
+                string verb = (body ?? "").Trim();
+                return OnMainThread(() => MenuInjector.Inject(verb));
             }
 
             if (route == "/loadsave" && method == "POST") {

@@ -186,6 +186,18 @@ Endpoints (loopback; drive with `curl`):
   - Save-slot selection has no menu verb — to skip straight into a save use `/loadsave`
     (below), **not** `OnSelectSlotConfirmPressed`, which no-ops if called cold (it needs the
     CONTINUE slot window already set up).
+  - **Caveat — capturing overlays:** `/input`'s menu verbs move the *game's* `uiObjectFocus`.
+    An overlay that captures input (`CaptureInput`, e.g. inventory, skill sheet) runs its own
+    cursor and **ignores** game focus, so `/input up`/`down`/`confirm` will NOT drive it — use
+    `/menu` instead. `/input` is still correct for non-capturing overlays (the save-slot screen)
+    that follow the game's focus.
+- `POST /menu` — body is a verb. Drives the **mod's own** overlay cursor by enqueuing a
+  `ModInputAction` onto `InputQueue` tagged with `MenuInputDrainer.Instance` — exactly the path a
+  real key press takes, so the pump realizes it the same frame (move sound, focus sync, speech all
+  on the real path). This is the only way to test/drive a capturing overlay over HTTP. Verbs:
+  `up|down|left|right` (nav), `confirm`, `readinfo` (the K tooltip key), `favorite`, `trash`.
+  Read results back via `/speech` and `/gui/mod`. Warns in its response if no overlay is currently
+  capturing input.
 - `POST /loadsave` — body is a save slot index (default `0`). From the title screen, loads
   that slot and **blocks until the gameplay scene is interactive**, then returns
   `loaded slot N: hero=… map=… focus=…`. This is the fast path to a real in-game state for
