@@ -101,7 +101,8 @@ namespace TangledeepAccess {
             // Run any queued dev eval jobs on the main thread (no-op when disabled).
             _devServer.Pump();
 
-            // Free Ctrl for the screen reader once Rewired has loaded its maps (poll until ready).
+            // Force the Default layout and evacuate mod-claimed keys once Rewired's maps load
+            // (poll until ready). See KeymapPatch.
             if (!_keymapApplied) {
                 _keymapApplied = KeymapPatch.TryApplyWhenReady();
             }

@@ -129,16 +129,13 @@ namespace TangledeepAccess.Controls {
         }
 
         /// <summary>
-        /// The hotbar keys: A reads the active page, backtick cycles to the next page and reads it.
-        /// Claimed by the top-priority <see cref="HotbarInputDrainer"/> so the hotbar is reachable
-        /// even while a full-screen overlay owns input (e.g. flip pages before assigning in the skill
-        /// sheet). Backtick replaces the game's Ctrl "Cycle Hotbars" — Ctrl is the screen reader's
-        /// stop key — and the game's Ctrl binding is stripped on load (see KeymapPatch).
+        /// The hotbar key: backtick cycles to the next page and reads it. Claimed by the top-priority
+        /// <see cref="HotbarInputDrainer"/> so the hotbar is reachable even while a full-screen overlay
+        /// owns input (e.g. flip pages before assigning in the skill sheet). Backtick replaces the
+        /// game's Ctrl "Cycle Hotbars" — Ctrl is the screen reader's stop key — and the game's Ctrl
+        /// binding is stripped on load (see KeymapPatch).
         /// </summary>
         public static ModInputAction? Hotbar() {
-            if (Input.GetKeyDown(KeyCode.A)) {
-                return ModInputAction.Of(ModInputKind.ReadHotbar);
-            }
             if (Input.GetKeyDown(KeyCode.BackQuote)) {
                 return ModInputAction.Of(ModInputKind.CycleHotbar);
             }
