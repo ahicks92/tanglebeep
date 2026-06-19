@@ -61,6 +61,18 @@ namespace TangledeepAccess.Tests.Ui {
         }
 
         [Fact]
+        public void QuantityReadsAsMultiplierAfterName() {
+            Assert.Equal("Bread x 5", new MessageBuilder().Fragment("Bread").PushQuantity(5).Build());
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(0)]
+        public void QuantityOfOneOrLessAppendsNothing(int count) {
+            Assert.Equal("Bread", new MessageBuilder().Fragment("Bread").PushQuantity(count).Build());
+        }
+
+        [Fact]
         public void FractionFollowsFragmentSpacingAndListBoundaries() {
             // The fraction space-joins after its label; list items comma-join (except the first,
             // which space-joins to the preceding fragment) — the status-readout shape.

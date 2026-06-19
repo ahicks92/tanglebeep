@@ -134,6 +134,20 @@ namespace TangledeepAccess.Speech {
         }
 
         /// <summary>
+        /// Append a stack count as the spoken multiplier "x N" (e.g. "Bread x 5"). The single
+        /// home for how item quantities read. A count of 1 or less appends nothing — a lone item
+        /// needs no multiplier — so callers pass the raw quantity unconditionally. Behaves like
+        /// <see cref="Fragment"/> for spacing (the caller sets list boundaries).
+        /// </summary>
+        public MessageBuilder PushQuantity(int count) {
+            if (count > 1) {
+                Fragment("x " + count);
+            }
+
+            return this;
+        }
+
+        /// <summary>
         /// Finalize and return the message, or null if nothing was appended. The builder
         /// is single-use after this.
         /// </summary>

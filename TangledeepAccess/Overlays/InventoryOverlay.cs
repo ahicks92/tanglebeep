@@ -223,11 +223,7 @@ namespace TangledeepAccess.Overlays {
             }
 
             message.Fragment(GameLabelReader.Clean(item.displayName));
-
-            int qty = item.GetQuantity();
-            if (qty > 1) {
-                message.ListItem("quantity " + qty);
-            }
+            message.PushQuantity(item.GetQuantity());
         }
 
         private static void AddItemActionStub(IOverlayBuilder builder, int uid, string verb) {
