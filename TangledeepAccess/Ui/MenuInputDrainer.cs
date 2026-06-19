@@ -54,9 +54,16 @@ namespace TangledeepAccess.Ui {
         private static void TickAndAct(ModInputAction? command, PrismSpeech speech) {
             TickResult result = UiRuntime.Dispatcher.Tick(command);
 
-            if (result.Moved && result.FocusReference is UIManagerScript.UIObject moveTarget) {
-                UIManagerScript.ChangeUIFocusAndAlignCursor(moveTarget);
-                FocusWatcher.NoticeSelfWrite(moveTarget);
+            if (result.Moved) {
+                // Our cursor moved under our own nav, so the game did not move it — play the move
+                // sound ourselves. The sound is owed to the edge traversal, not to a game-focus
+                // change: sync the game's visual focus only when the node maps to a game widget,
+                // but a pure mod-side control (no UIObject) still moved and must still be audible.
+                if (result.FocusReference is UIManagerScript.UIObject moveTarget) {
+                    UIManagerScript.ChangeUIFocusAndAlignCursor(moveTarget);
+                    FocusWatcher.NoticeSelfWrite(moveTarget);
+                }
+
                 UIManagerScript.PlayCursorSound("Move");
             }
 
