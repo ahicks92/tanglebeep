@@ -26,6 +26,19 @@ namespace TangledeepAccess.Controls {
 
         /// <summary>In-game pump: offer ui, then the look cursor, then free play.</summary>
         public static bool RouteInGame() {
+            // A full-screen overlay that declared it owns input takes the WHOLE frame: only the menu
+            // drainer runs, and it keeps claiming a HELD nav key (suppressWhileHeld) — like the title
+            // pump — so the key's auto-repeat can't leak to the game on the frames between our
+            // key-down edges. Without this, the game's own TDInputHandler.UpdateInput runs on those
+            // repeat frames and walks its parallel full-screen-UI cursor (playing its cursor sounds),
+            // and non-menu keys fall through to the other mod drainers (e.g. semicolon would toggle
+            // the look cursor from inside a menu). Keys the menu drainer does not claim still reach
+            // the GAME (so its own menu hotkeys — close, tab-switch, hotbar slotting — keep working),
+            // but the mod's free-play drainers (look cursor, scanner, gameplay queries) stay dormant.
+            if (UiRuntime.Dispatcher != null && UiRuntime.Dispatcher.CapturesInput) {
+                return !MenuInputDrainer.Instance.Claim(suppressWhileHeld: true);
+            }
+
             foreach (InputDrainer drainer in InGame) {
                 if (drainer.Claim(suppressWhileHeld: false)) {
                     return false; // claimed — suppress the game this frame
