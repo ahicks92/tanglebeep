@@ -6,9 +6,12 @@ namespace TangledeepAccess.Gameplay {
     /// The scanner's rotating list of entities to ping, one per cadence tick. Entities are
     /// identified by reference (the underlying game object), so a thing that merely moves keeps its
     /// slot with refreshed coordinates, while a genuinely new thing is inserted at the cursor — the
-    /// next to play — so it pings right away instead of waiting at the back of the queue. No sorting:
-    /// reconcile preserves order and only adds/removes/refreshes. Pure (Core): identity is by
-    /// reference, payload is integer tile offsets, so it tests without the engine.
+    /// next to play — so it pings right away instead of waiting at the back of the queue. Reconcile
+    /// preserves order and only adds/removes/refreshes; the list is re-sorted by x then y once per
+    /// lap, at the moment iteration wraps back to the front, so each full sweep plays left-to-right,
+    /// near-to-far on each column. Sorting at the wrap (not on insert) leaves a newcomer inserted
+    /// mid-lap still playing next — it folds into sort order only on the following lap. Pure (Core):
+    /// identity is by reference, payload is integer tile offsets, so it tests without the engine.
     /// </summary>
     public sealed class ScanRing {
         public struct Entry {
@@ -80,13 +83,24 @@ namespace TangledeepAccess.Gameplay {
             }
 
             Entry e = _entries[_cursor];
-            _cursor = (_cursor + 1) % _entries.Count;
+            _cursor++;
+            if (_cursor >= _entries.Count) {
+                // Lap complete: re-sort so the next sweep runs in x-then-y order, then reset.
+                _entries.Sort(CompareXThenY);
+                _cursor = 0;
+            }
             return e;
         }
 
         public void Clear() {
             _entries.Clear();
             _cursor = 0;
+        }
+
+        // Spatial sweep order: column-major, x ascending then y ascending.
+        private static int CompareXThenY(Entry p, Entry q) {
+            int c = p.X.CompareTo(q.X);
+            return c != 0 ? c : p.Y.CompareTo(q.Y);
         }
 
         // Reference identity regardless of any Equals/== overrides (UnityEngine.Object overrides ==).

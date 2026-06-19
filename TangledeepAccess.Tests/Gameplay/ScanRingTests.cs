@@ -73,6 +73,36 @@ namespace TangledeepAccess.Tests.Gameplay {
         }
 
         [Fact]
+        public void SweepIsReorderedByXThenYOnEachLap() {
+            var ring = new ScanRing();
+            // Inserted out of spatial order; reconcile preserves insertion order, so the first lap
+            // plays in that order, but the second lap sweeps by x then y.
+            ring.Reconcile(Set((A, 2, 5), (B, 1, 9), (C, 1, 3)));
+
+            // First lap: insertion order (no sort yet).
+            Assert.Same(A, ring.Next().Value.Id);
+            Assert.Same(B, ring.Next().Value.Id);
+            Assert.Same(C, ring.Next().Value.Id); // wrap here sorts for the next lap
+
+            // Second lap: sorted by x ascending, then y ascending -> C(1,3), B(1,9), A(2,5).
+            Assert.Same(C, ring.Next().Value.Id);
+            Assert.Same(B, ring.Next().Value.Id);
+            Assert.Same(A, ring.Next().Value.Id);
+        }
+
+        [Fact]
+        public void NewcomerStillPingsNextEvenAfterALapSort() {
+            var ring = new ScanRing();
+            ring.Reconcile(Set((A, 5, 0), (B, 1, 0)));
+            ring.Next(); // A
+            ring.Next(); // B; wrap sorts to B(1),A(5)
+
+            // C appears mid-lap and must still play immediately, ahead of the sorted survivors.
+            ring.Reconcile(Set((A, 5, 0), (B, 1, 0), (C, 9, 0)));
+            Assert.Same(C, ring.Next().Value.Id);
+        }
+
+        [Fact]
         public void RemovingTheUpcomingEntryAdvancesToTheNextSurvivor() {
             var ring = new ScanRing();
             ring.Reconcile(Set((A, 0, 0), (B, 0, 0), (C, 0, 0)));
