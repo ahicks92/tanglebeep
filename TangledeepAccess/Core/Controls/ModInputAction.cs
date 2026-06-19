@@ -38,6 +38,10 @@ namespace TangledeepAccess.Controls {
         Scan,
         ReadStatus,
         ReadHotbar,
+
+        /// <summary>Cycle to the next hotbar page and read it. The mod owns this on backtick because
+        /// the game's own "Cycle Hotbars" defaults to Ctrl, which the screen reader claims.</summary>
+        CycleHotbar,
         Help,
         RepeatLast,
 

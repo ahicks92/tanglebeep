@@ -116,6 +116,13 @@
             <HintPath>$(Managed)\Assembly-CSharp.dll</HintPath>
             <Private>false</Private>
         </Reference>
+        <!-- Rewired is the game's input system. We read raw UnityEngine.Input for our own
+             keys, but we also strip the game's Ctrl binding off "Cycle Hotbars" (Ctrl is the
+             screen reader's stop-speech key) via Rewired's controller maps. -->
+        <Reference Include="Rewired_Core">
+            <HintPath>$(Managed)\Rewired_Core.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
         <Reference Include="Assembly-CSharp-firstpass">
             <HintPath>$(Managed)\Assembly-CSharp-firstpass.dll</HintPath>
             <Private>false</Private>

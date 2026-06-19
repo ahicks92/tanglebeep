@@ -77,7 +77,7 @@ namespace TangledeepAccess.Gameplay {
             if (action.Kind == ModInputKind.Help) {
                 return message.Fragment(
                     "Tangledeep Access commands. K, read here and surroundings. "
-                    + "L, scan in view. Y, status. A, hotbar. Semicolon, look cursor; "
+                    + "L, scan in view. Y, status. A, hotbar; backtick, cycle hotbar. Semicolon, look cursor; "
                     + "then arrows or numpad to move it, brackets to jump between things in view, "
                     + "Home to recenter. Page up and page down, step scanner entries; control plus "
                     + "page up or down, step scanner categories. "
@@ -107,6 +107,9 @@ namespace TangledeepAccess.Gameplay {
                 case ModInputKind.ReadHotbar:
                     ReadHotbar(message);
                     break;
+                case ModInputKind.CycleHotbar:
+                    CycleHotbar(message);
+                    break;
             }
 
             return message;
@@ -115,19 +118,28 @@ namespace TangledeepAccess.Gameplay {
         // --- Hotbar ---
 
         // The active hotbar page index is a private static on UIManagerScript; slots are
-        // page*8 + 0..7 into the flat hotbarAbilities array.
+        // page*8 + 0..7 into the flat hotbarAbilities array. Two pages of 8.
         private static readonly AccessTools.FieldRef<int> ActiveHotbarPage =
             AccessTools.StaticFieldRefAccess<int>(AccessTools.Field(typeof(UIManagerScript), "indexOfActiveHotbar"));
 
+        // Replace the game's Ctrl "Cycle Hotbars" (freed for the screen reader): flip to the next
+        // page via the game's own state-mutator — keeping ability-firing correct — then read it out.
+        private static void CycleHotbar(MessageBuilder message) {
+            UIManagerScript.ToggleSecondaryHotbar();
+            ReadHotbar(message);
+        }
+
         private static void ReadHotbar(MessageBuilder message) {
             HotbarBindable[] hb = UIManagerScript.hotbarAbilities;
-            message.Fragment("Hotbar");
+            message.Fragment(ModStrings.Hotbar);
             if (hb == null) {
-                message.Fragment("unavailable");
+                message.Fragment(ModStrings.HotbarUnavailable);
                 return;
             }
 
             int page = ActiveHotbarPage();
+            message.Fragment((page + 1).ToString());
+
             bool any = false;
             for (int i = 0; i < 8; i++) {
                 int idx = page * 8 + i;
@@ -143,7 +155,7 @@ namespace TangledeepAccess.Gameplay {
             }
 
             if (!any) {
-                message.Fragment("empty");
+                message.Fragment(ModStrings.HotbarEmpty);
             }
         }
 

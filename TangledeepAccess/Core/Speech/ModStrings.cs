@@ -22,6 +22,12 @@ namespace TangledeepAccess.Speech {
             return amount + " JP";
         }
 
+        // --- Hotbar ----------------------------------------------------------------------------
+
+        public const string Hotbar = "hotbar";
+        public const string HotbarEmpty = "empty";
+        public const string HotbarUnavailable = "unavailable";
+
         // --- Skill sheet: header / modes -------------------------------------------------------
 
         public const string SkillsHeader = "Skills";

@@ -36,6 +36,11 @@ namespace TangledeepAccess {
         // the first call (speaking from Awake can precede backend init). -1 once spoken.
         private int _startupFrames = 30;
 
+        // One-time keymap fix: strip the game's Ctrl binding off "Cycle Hotbars" once Rewired is
+        // ready (Ctrl is the screen reader's stop-speech key). Stops polling once applied; the
+        // SwitchControlMode postfix re-asserts it if the game ever rebuilds the keyboard map.
+        private bool _keymapApplied;
+
         private void Awake() {
             LogBepInExBackend.Install(Logger);
             Log.Info(PluginName + " " + PluginVersion + " loading");
@@ -94,6 +99,11 @@ namespace TangledeepAccess {
         private void Update() {
             // Run any queued dev eval jobs on the main thread (no-op when disabled).
             _devServer.Pump();
+
+            // Free Ctrl for the screen reader once Rewired has loaded its maps (poll until ready).
+            if (!_keymapApplied) {
+                _keymapApplied = KeymapPatch.TryApplyWhenReady();
+            }
 
             // Speak a one-time "ready" line once the backend has had a few frames to come up,
             // so the player knows the mod is active and how to discover its commands.

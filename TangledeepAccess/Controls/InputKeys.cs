@@ -89,7 +89,7 @@ namespace TangledeepAccess.Controls {
 
         /// <summary>
         /// Free-play query hotkeys, the gameplay drainer's set: K read here, L scan, Y status,
-        /// A hotbar, apostrophe repeat, slash help.
+        /// A hotbar, backtick cycle hotbar, apostrophe repeat, slash help.
         /// </summary>
         public static ModInputAction? Query() {
             if (Input.GetKeyDown(KeyCode.K)) {
@@ -103,6 +103,11 @@ namespace TangledeepAccess.Controls {
             }
             if (Input.GetKeyDown(KeyCode.A)) {
                 return ModInputAction.Of(ModInputKind.ReadHotbar);
+            }
+            // Backtick replaces the game's Ctrl "Cycle Hotbars" (Ctrl is the reader's stop key); the
+            // game leaves backtick unbound. We strip the game's Ctrl binding (see KeymapPatch).
+            if (Input.GetKeyDown(KeyCode.BackQuote)) {
+                return ModInputAction.Of(ModInputKind.CycleHotbar);
             }
             if (Input.GetKeyDown(KeyCode.Quote)) {
                 return ModInputAction.Of(ModInputKind.RepeatLast);
