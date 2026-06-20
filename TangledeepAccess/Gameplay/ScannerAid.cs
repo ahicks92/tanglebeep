@@ -49,8 +49,17 @@ namespace TangledeepAccess.Gameplay {
             Reconcile(hero);
             ScanRing.Entry? next = _ring.Next();
             if (next.HasValue) {
-                TonePlayer.PlayTimeline(ScanCue.Build(next.Value.X, next.Value.Y));
+                TonePlayer.PlayTimeline(VoicePing(next.Value));
             }
+        }
+
+        // The ping for one entity: its category's radar sample if one is loaded, else the default
+        // triangle tone. Both share ScanCue's pan/pitch/level/envelope, so only the timbre differs.
+        private static GrainTimeline VoicePing(ScanRing.Entry e) {
+            if (SampleBank.TryGet(e.Category, out float[] samples, out int sampleRate)) {
+                return ScanCue.BuildSample(e.X, e.Y, samples, sampleRate);
+            }
+            return ScanCue.Build(e.X, e.Y);
         }
 
         // Rebuild the current visible set (offsets relative to the hero) and reconcile the ring.
@@ -60,7 +69,7 @@ namespace TangledeepAccess.Gameplay {
             foreach (Poi poi in Surroundings.CollectVisible(hero)) {
                 int x = (int)poi.Pos.x - (int)hp.x;
                 int y = (int)poi.Pos.y - (int)hp.y;
-                _current.Add(new ScanRing.Entry(poi.Handle, x, y));
+                _current.Add(new ScanRing.Entry(poi.Handle, x, y, poi.Category));
             }
             _ring.Reconcile(_current);
         }

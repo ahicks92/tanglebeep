@@ -35,22 +35,12 @@ namespace TangledeepAccess.Audio {
 
             double start = 0.0; // first ping at the start of the radar buffer
             for (int i = 0; i < moved.Count; i++) {
-                double pan = Ping.Pan(moved[i].Dx, ScanCue.MaxPanTiles);
-                double offsetRate = Ping.PitchRate(moved[i].Dy, ScanCue.SemitonesPerTileY);
-                // Both grains are the same recording; the offset's varispeed encodes y as the interval.
-                Ping.Pair(timeline, Voice(samples, sampleRate), Voice(samples, sampleRate),
-                          offsetRate, pan, start, ScanCue.Volume, ScanCue.GapSeconds);
+                // Identical to a scanner sample ping (ScanCue.AddSample owns the pan/pitch/level/gap/
+                // envelope), so the monster-move cue and the scanner cannot drift; only the .wav differs.
+                ScanCue.AddSample(timeline, moved[i].Dx, moved[i].Dy, samples, sampleRate, start);
                 start += ScanCue.IntervalSeconds;
             }
             return true;
-        }
-
-        // The radar voice for a sample: the wav wrapped in the scanner's tone envelope, which both shapes
-        // the ping and bounds it to ScanCue.ToneSeconds (these recordings are longer than the envelope).
-        private static Grain Voice(float[] samples, int sampleRate) {
-            return new AdsrGrain(
-                new BufferGrain(samples, 0, samples.Length, sampleRate),
-                ScanCue.Attack, ScanCue.Decay, ScanCue.Sustain, ScanCue.Release, ScanCue.SustainLevel);
         }
     }
 }

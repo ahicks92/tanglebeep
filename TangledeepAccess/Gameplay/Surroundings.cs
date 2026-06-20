@@ -10,6 +10,7 @@ namespace TangledeepAccess.Gameplay {
         public bool Hostile;
         public int Steps; // king-move distance from the hero
         public object Handle; // the underlying Actor/Item, for stable reference identity (scanner)
+        public RadarCategory Category; // which radar voice the scanner pings it with
     }
 
     /// <summary>
@@ -44,7 +45,7 @@ namespace TangledeepAccess.Gameplay {
 
                 string name = GameLabelReader.Clean(actor.displayName) ?? SpecialActorName(actor);
                 if (name != null && seen.Add(Key(name, p))) {
-                    found.Add(Make(name, actor.actorfaction == Faction.ENEMY, hp, p, actor));
+                    found.Add(Make(name, actor.actorfaction == Faction.ENEMY, hp, p, actor, Classify(actor)));
                 }
             }
 
@@ -57,7 +58,7 @@ namespace TangledeepAccess.Gameplay {
                 string name = TerrainFeature.Name(cluster.Kind);
                 object handle = string.Intern("terrain:" + cluster.Kind + ":" + cluster.MinX + "," + cluster.MinY);
                 if (seen.Add(Key(name, at))) {
-                    found.Add(Make(name, false, hp, at, handle));
+                    found.Add(Make(name, false, hp, at, handle, RadarCategory.Default));
                 }
             }
 
@@ -77,7 +78,7 @@ namespace TangledeepAccess.Gameplay {
                     foreach (Item item in items) {
                         string name = GameLabelReader.Clean(item.GetNameForUI());
                         if (name != null && seen.Add(Key(name, at))) {
-                            found.Add(Make("item: " + name, false, hp, at, item));
+                            found.Add(Make("item: " + name, false, hp, at, item, RadarCategory.Powerup));
                         }
                     }
                 }
@@ -113,7 +114,7 @@ namespace TangledeepAccess.Gameplay {
             return visible != null && visible[(int)p.x, (int)p.y];
         }
 
-        private static Poi Make(string name, bool hostile, Vector2 from, Vector2 to, object handle) {
+        private static Poi Make(string name, bool hostile, Vector2 from, Vector2 to, object handle, RadarCategory category) {
             int dx = (int)to.x - (int)from.x;
             int dy = (int)to.y - (int)from.y;
             return new Poi {
@@ -122,7 +123,34 @@ namespace TangledeepAccess.Gameplay {
                 Hostile = hostile,
                 Steps = GridDirection.Steps(dx, dy),
                 Handle = handle,
+                Category = category,
             };
+        }
+
+        // The radar voice category for an actor, from its game type. Monsters, stairs/portals, and
+        // powerups map straight from the actor type; a destructible is a container only when it is a
+        // breakable (targetable) non-terrain object — crates and pots, not props, fountains, or terrain;
+        // an NPC is a "shop" only when it actually runs a shop (a non-empty shopRef). Everything else
+        // (doors, props, story NPCs, terrain) falls back to the default triangle tone.
+        private static RadarCategory Classify(Actor actor) {
+            switch (actor.GetActorType()) {
+                case ActorTypes.MONSTER:
+                    return RadarCategory.Monster;
+                case ActorTypes.STAIRS:
+                    return RadarCategory.Stairs;
+                case ActorTypes.POWERUP:
+                    return RadarCategory.Powerup;
+                case ActorTypes.NPC:
+                    return actor is NPC npc && !string.IsNullOrEmpty(npc.shopRef)
+                        ? RadarCategory.Shop
+                        : RadarCategory.Default;
+                case ActorTypes.DESTRUCTIBLE:
+                    return actor is Destructible d && d.targetable && !d.isTerrainTile
+                        ? RadarCategory.Container
+                        : RadarCategory.Default;
+                default:
+                    return RadarCategory.Default;
+            }
         }
 
         private static string Key(string name, Vector2 pos) {

@@ -18,11 +18,13 @@ namespace TangledeepAccess.Gameplay {
             public object Id;
             public int X;
             public int Y;
+            public RadarCategory Category; // selects the ping voice; carried, not used by ring ordering
 
-            public Entry(object id, int x, int y) {
+            public Entry(object id, int x, int y, RadarCategory category = RadarCategory.Default) {
                 Id = id;
                 X = x;
                 Y = y;
+                Category = category;
             }
         }
 

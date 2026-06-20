@@ -53,6 +53,16 @@
             LogicalName="TangledeepAccess.Sounds.dangerous_tile.wav" />
         <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\monster_moved.wav"
             LogicalName="TangledeepAccess.Sounds.monster_moved.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\radar_monster.wav"
+            LogicalName="TangledeepAccess.Sounds.radar_monster.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\radar_container.wav"
+            LogicalName="TangledeepAccess.Sounds.radar_container.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\radar_powerup.wav"
+            LogicalName="TangledeepAccess.Sounds.radar_powerup.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\radar_service_shop.wav"
+            LogicalName="TangledeepAccess.Sounds.radar_service_shop.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\radar_stairs.wav"
+            LogicalName="TangledeepAccess.Sounds.radar_stairs.wav" />
     </ItemGroup>
 
     <!-- Generate the Plugin.PluginVersion constant from <Version> (Directory.Build.props)

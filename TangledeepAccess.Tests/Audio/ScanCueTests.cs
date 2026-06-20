@@ -81,6 +81,30 @@ namespace TangledeepAccess.Tests.Audio {
         }
 
         [Fact]
+        public void BuildSampleIsAReferenceOffsetPairVoicedBySample() {
+            var samples = new float[2205]; // 0.05 s at 44100
+            for (int i = 0; i < samples.Length; i++) {
+                samples[i] = 0.5f;
+            }
+
+            var p = ScanCue.BuildSample(4, 3, samples, 44100).Placements;
+            Assert.Equal(2, p.Count);
+
+            // Same ping shape and constants as a tone ping: shared pan, reference at base rate, offset
+            // y-pitched a gap later.
+            Assert.Equal(ScanCue.Pan(4), p[0].Pan, 9);
+            Assert.Equal(ScanCue.Pan(4), p[1].Pan, 9);
+            Assert.Equal(0.0, p[0].Start, 9);
+            Assert.Equal(ScanCue.GapSeconds, p[1].Start, 9);
+            Assert.Equal(1.0, p[0].Rate, 9);
+            Assert.Equal(Ping.PitchRate(3, ScanCue.SemitonesPerTileY), p[1].Rate, 9);
+
+            // Voiced by the sample (wrapped in the scanner envelope), not a triangle.
+            var adsr = Assert.IsType<AdsrGrain>(p[0].Grain);
+            Assert.Same(samples, Assert.IsType<BufferGrain>(adsr.Inner).Data);
+        }
+
+        [Fact]
         public void ToneLengthIsTheEnvelopeSum() {
             Assert.Equal(
                 ScanCue.Attack + ScanCue.Decay + ScanCue.Sustain + ScanCue.Release,

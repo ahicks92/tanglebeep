@@ -68,13 +68,42 @@ namespace TangledeepAccess.Audio {
         /// interaural time delay carrying left/right placement, that special case is gone.
         /// </summary>
         public static GrainTimeline Build(int x, int y) {
-            double pan = Pan(x);
             var timeline = new GrainTimeline();
-            // Pitch is baked into the offset grain's frequency, so its placement rate stays 1 — the
-            // scanner reads y from the reference→offset interval.
-            Ping.Pair(timeline, Tone(ReferenceFrequencyHz), Tone(SecondFrequencyHz(y)),
-                      1.0, pan, 0.0, Volume, GapSeconds);
+            AddTriangle(timeline, x, y, 0.0);
             return timeline;
+        }
+
+        /// <summary>A sample-voiced ping (a radar .wav instead of the default triangle) for one entity,
+        /// as a fresh timeline.</summary>
+        public static GrainTimeline BuildSample(int x, int y, float[] samples, int sampleRate) {
+            var timeline = new GrainTimeline();
+            AddSample(timeline, x, y, samples, sampleRate, 0.0);
+            return timeline;
+        }
+
+        /// <summary>Add the default triangle ping pair for (x, y) at <paramref name="start"/> onto a
+        /// shared timeline. Pitch is baked into the offset grain's frequency, so its rate stays 1.</summary>
+        public static void AddTriangle(GrainTimeline timeline, int x, int y, double start) {
+            Ping.Pair(timeline, Tone(ReferenceFrequencyHz), Tone(SecondFrequencyHz(y)),
+                      1.0, Pan(x), start, Volume, GapSeconds);
+        }
+
+        /// <summary>
+        /// Add a sample-voiced ping pair for (x, y) at <paramref name="start"/> onto a shared timeline:
+        /// the .wav as both reference and y-pitched offset, with the scanner's pan, level, gap, and
+        /// envelope. The shared path for the entity scanner's per-category radar sounds and the combat
+        /// radar's monster-move pings — so both can never drift from the scanner's tuning.
+        /// </summary>
+        public static void AddSample(GrainTimeline timeline, int x, int y, float[] samples, int sampleRate, double start) {
+            Ping.Pair(timeline, SampleVoice(samples, sampleRate), SampleVoice(samples, sampleRate),
+                      Ping.PitchRate(y, SemitonesPerTileY), Pan(x), start, Volume, GapSeconds);
+        }
+
+        /// <summary>The radar voice for a sample: the wav wrapped in the scanner's tone envelope, which
+        /// shapes it and bounds it to <see cref="ToneSeconds"/> (these recordings are longer).</summary>
+        public static Grain SampleVoice(float[] samples, int sampleRate) {
+            return new AdsrGrain(new BufferGrain(samples, 0, samples.Length, sampleRate),
+                                 Attack, Decay, Sustain, Release, SustainLevel);
         }
 
         private static Grain Tone(double frequencyHz) {
