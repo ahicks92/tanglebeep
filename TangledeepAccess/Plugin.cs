@@ -83,6 +83,7 @@ namespace TangledeepAccess {
             _dispatcher.Register(new SkillSheetOverlay().Handler);      // J tab, skills (learn mode)
             _dispatcher.Register(new EquipmentOverlay().Handler);       // E tab, gear
             _dispatcher.Register(new ShopOverlay().Handler);            // merchant / banker shop
+            _dispatcher.Register(new CharacterSheetOverlay().Handler); // C tab, character stats
             UiRuntime.Dispatcher = _dispatcher;
 
             try {

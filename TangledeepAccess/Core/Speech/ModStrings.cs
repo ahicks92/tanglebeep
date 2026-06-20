@@ -244,5 +244,34 @@ namespace TangledeepAccess.Speech {
         public static string HowMany(int count) {
             return "how many? " + count;
         }
+
+        // --- Character sheet -------------------------------------------------------------------
+
+        // Section anchors for the flattened character sheet.
+        public const string CharSheetCore = "core stats";
+        public const string CharSheetElements = "elements and defense";
+        public const string CharSheetStatusEffects = "status effects";
+        public const string CharSheetAdventure = "adventure";
+        public const string CharSheetFeats = "feats";
+
+        /// <summary>Job and level for the header, e.g. "Brigand level 2".</summary>
+        public static string JobLevel(string job, int level) {
+            return job + " level " + level;
+        }
+
+        /// <summary>XP progress for the header, e.g. "XP 72 of 160".</summary>
+        public static string Xp(int cur, int next) {
+            return "XP " + cur + " of " + next;
+        }
+
+        /// <summary>An element's resistance value, e.g. "defense 8%".</summary>
+        public static string ElementDefense(string value) {
+            return "defense " + value;
+        }
+
+        /// <summary>An element's bonus-damage value, e.g. "damage 0%".</summary>
+        public static string ElementDamage(string value) {
+            return "damage " + value;
+        }
     }
 }
