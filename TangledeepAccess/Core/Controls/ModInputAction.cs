@@ -80,6 +80,7 @@ namespace TangledeepAccess.Controls {
         // CursorSkip (Shift+ring) skips to the next terrain/shape change or occupant; the rest are
         // its read/follow/recenter verbs.
         CursorRead,
+        CursorExamine,
         CursorSkip,
         CursorFollowToggle,
         CursorRecenter,

@@ -16,8 +16,10 @@ namespace TangledeepAccess.Gameplay {
     /// Collects everything in the hero's line of sight — actors (NPCs, monsters, stairs,
     /// destructibles) from <c>actorsInMap</c> plus ground items on visible tiles — as a list of
     /// <see cref="Poi"/>. Drives the F2 entity radar (<see cref="ScannerAid"/>), which pings the
-    /// whole set; the textual scanner builds its own explored-map snapshot, not this. Re-queries
-    /// live state every call.
+    /// whole set; the textual scanner builds its own explored-map snapshot, not this. Terrain is the
+    /// exception: it is clustered (over in-sight tiles, the same <see cref="TerrainClusterer"/> the
+    /// scanner uses on explored tiles) into one Poi per pool at its nearest point, so a water field
+    /// pings once rather than per tile. Re-queries live state every call.
     /// </summary>
     internal static class Surroundings {
         public static List<Poi> CollectVisible(HeroPC hero) {
@@ -26,9 +28,13 @@ namespace TangledeepAccess.Gameplay {
             // Some pickups appear both as an actor and a tile item; dedupe by name + tile.
             var seen = new HashSet<string>();
 
-            foreach (Actor actor in MapMasterScript.activeMap.actorsInMap) {
+            Map map = MapMasterScript.activeMap;
+            foreach (Actor actor in map.actorsInMap) {
                 if (actor == null || actor == hero || actor.destroyed) {
                     continue; // an opened crate / slain monster lingers here until cleanup — skip it
+                }
+                if (TerrainFeature.Is(actor)) {
+                    continue; // terrain — clustered below into one Poi per pool, not pinged per tile
                 }
 
                 Vector2 p = actor.GetPos();
@@ -42,7 +48,19 @@ namespace TangledeepAccess.Gameplay {
                 }
             }
 
-            Map map = MapMasterScript.activeMap;
+            // Terrain clusters over the in-sight set: one ping per pool, at its nearest cell. The
+            // handle is an interned key (kind + bounding-box corner) so a steady pool keeps its ring
+            // slot across reconciles even though the cluster object is rebuilt each sweep.
+            foreach (TerrainCluster cluster in TerrainFeature.Cluster(map, Visibility.VisibleNow)) {
+                TerrainCell near = cluster.NearestCellTo((int)hp.x, (int)hp.y);
+                var at = new Vector2(near.X, near.Y);
+                string name = TerrainFeature.Name(cluster.Kind);
+                object handle = string.Intern("terrain:" + cluster.Kind + ":" + cluster.MinX + "," + cluster.MinY);
+                if (seen.Add(Key(name, at))) {
+                    found.Add(Make(name, false, hp, at, handle));
+                }
+            }
+
             for (int x = 0; x < map.columns; x++) {
                 for (int y = 0; y < map.rows; y++) {
                     if (!hero.visibleTilesArray[x, y]) {

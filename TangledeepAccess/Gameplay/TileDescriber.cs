@@ -29,23 +29,24 @@ namespace TangledeepAccess.Gameplay {
         }
 
         /// <summary>
-        /// The actor/feature/blocking object occupying a tile (the name to speak), or null for bare
-        /// terrain. Prefers the game's hover text (monster/NPC/feature), but when that is empty or is
-        /// merely one of the ground items, falls back to a collidable destructible the hover ignores
-        /// (a building/prop). Used both to name the occupant and to decide whether the entity cue
-        /// should sound.
+        /// The short spoken form of the actor/feature occupying a tile, or null for bare terrain (and
+        /// terrain-only tiles — water/mud are terrain, never occupants). A monster reads as
+        /// "name, HP%, attitude"; everything else is its name (the game's hover text, falling back to a
+        /// blocking prop the hover ignores). Used both to name the occupant and to decide whether the
+        /// entity cue should sound. The full tooltip — exact stats, hazard effects — is <see cref="Examine"/>.
         /// </summary>
         public static string Occupant(MapTileData tile) {
             if (tile == null) {
                 return null;
             }
 
-            // GetHoverText returns the actor/feature on the tile, but for an item-only tile it
-            // returns the item's name — which AppendItems would then repeat — so treat that as no
-            // occupant and let AppendItems name the item once.
+            // GetHoverText sets currentHoveredActor to whatever it described. For an item-only tile it
+            // returns the item's name (AppendItems repeats it — treat as no occupant); for a
+            // terrain-only tile it returns the terrain tile, which is terrain, not an occupant.
             string actor = GameLabelReader.Clean(HoverInfoScript.GetHoverText(tile));
-            if (actor != null && !IsGroundItemName(tile, actor)) {
-                return actor;
+            Actor described = HoverInfoScript.currentHoveredActor;
+            if (actor != null && !IsGroundItemName(tile, actor) && !TerrainFeature.Is(described)) {
+                return ShortForm(described, actor);
             }
 
             // A blocking object the game doesn't hover (a building/prop destructible like Nando's
@@ -53,9 +54,58 @@ namespace TangledeepAccess.Gameplay {
             return BlockingObjectName(tile);
         }
 
+        /// <summary>
+        /// The full examine tooltip for a tile — the game's own <c>GetHoverText</c> verbatim
+        /// (monster stats/resistances/statuses, or terrain plus its hazard effect like
+        /// "chance to root on step"). This is the Shift+K form; the hazard effect deliberately rides
+        /// here and not on the terse read, since a player memorizes it after a couple of encounters.
+        /// </summary>
+        public static string Examine(MapTileData tile) {
+            if (tile == null) {
+                return null;
+            }
+
+            string text = GameLabelReader.Clean(HoverInfoScript.GetHoverText(tile));
+            if (!string.IsNullOrEmpty(text) && !IsGroundItemName(tile, text)) {
+                return text;
+            }
+
+            return BlockingObjectName(tile);
+        }
+
+        // The terse occupant string. A monster collapses to name + HP% + attitude; anything else keeps
+        // its (already short) hover name.
+        private static string ShortForm(Actor described, string hoverName) {
+            if (described is Monster mn) {
+                string name = GameLabelReader.Clean(mn.displayName) ?? mn.actorRefName;
+                int hpPct = (int)(mn.myStats.GetCurStatAsPercentOfMax(StatTypes.HEALTH) * 100f);
+                return name + ", " + hpPct + "% hp, " + Attitude(mn);
+            }
+
+            return hoverName;
+        }
+
+        // The monster's stance toward the hero, mirroring the game's own examine wording.
+        private static string Attitude(Monster mn) {
+            HeroPC hero = GameMasterScript.heroPCActor;
+            if (hero != null && mn.CheckTarget(hero)) {
+                return "hostile";
+            }
+            if (mn.myBehaviorState == BehaviorState.CURIOUS || mn.myBehaviorState == BehaviorState.SEEKINGITEM) {
+                return "curious";
+            }
+            if (mn.myBehaviorState == BehaviorState.STALKING) {
+                return "stalking";
+            }
+
+            return mn.aggroRange > 0f ? "aggressive" : "neutral";
+        }
+
         // A collidable object the game's hover text ignores — chiefly non-targetable destructibles
         // (decorative buildings and props). GetHoverText returns empty for them and GetTargetable
         // is null, yet they block the tile, so we name them from the destructible's display name.
+        // Terrain tiles are non-targetable destructibles too, but they are terrain, not objects, so
+        // they are skipped here.
         private static string BlockingObjectName(MapTileData tile) {
             List<Actor> here = tile.GetAllTargetablePlusDestructibles();
             if (here == null) {
@@ -63,7 +113,7 @@ namespace TangledeepAccess.Gameplay {
             }
 
             foreach (Actor a in here) {
-                if (a.GetActorType() == ActorTypes.DESTRUCTIBLE) {
+                if (a.GetActorType() == ActorTypes.DESTRUCTIBLE && !TerrainFeature.Is(a)) {
                     string name = GameLabelReader.Clean(a.displayName);
                     if (name != null) {
                         return name;

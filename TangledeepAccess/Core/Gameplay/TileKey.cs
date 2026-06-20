@@ -17,17 +17,31 @@ namespace TangledeepAccess.Gameplay {
         public readonly string Terrain;
         public readonly TileShape Shape;
 
-        public TileKey(string terrain, TileShape shape) {
+        /// <summary>Explored but not currently in sight — the tile is known and minimap-tracked but
+        /// not seen now. Part of the key so crossing the sight boundary announces "blurred" / "clear"
+        /// once on the differential, the same way a shape change is announced once.</summary>
+        public readonly bool Blurred;
+
+        public TileKey(string terrain, TileShape shape, bool blurred = false) {
             Terrain = terrain;
             Shape = shape;
+            Blurred = blurred;
         }
 
         /// <summary>
-        /// Append only the fields that differ from <paramref name="previous"/> — terrain word and/or
-        /// shape. A null <paramref name="previous"/> (no prior context) appends both, i.e. a full read.
+        /// Append only the fields that differ from <paramref name="previous"/> — the blurred boundary,
+        /// terrain word, and/or shape. A null <paramref name="previous"/> (no prior context) appends a
+        /// full read: "blurred" only if blurred (clear is the unmarked default), then terrain and shape.
         /// </summary>
         public void AppendChanges(MessageBuilder message, TileKey? previous) {
             bool full = previous == null;
+            if (full) {
+                if (Blurred) {
+                    message.Fragment("blurred");
+                }
+            } else if (previous.Value.Blurred != Blurred) {
+                message.Fragment(Blurred ? "blurred" : "clear");
+            }
             if (full || previous.Value.Terrain != Terrain) {
                 message.Fragment(Terrain);
             }
@@ -36,17 +50,20 @@ namespace TangledeepAccess.Gameplay {
             }
         }
 
-        /// <summary>Append the whole key (terrain + shape), no differencing.</summary>
+        /// <summary>Append the whole key (blurred marker + terrain + shape), no differencing.</summary>
         public void AppendFull(MessageBuilder message) {
+            if (Blurred) {
+                message.Fragment("blurred");
+            }
             message.Fragment(Terrain);
             message.Fragment(Shape.Speak());
         }
 
-        public bool Equals(TileKey other) => Terrain == other.Terrain && Shape == other.Shape;
+        public bool Equals(TileKey other) => Terrain == other.Terrain && Shape == other.Shape && Blurred == other.Blurred;
 
         public override bool Equals(object obj) => obj is TileKey other && Equals(other);
 
-        public override int GetHashCode() => unchecked(((Terrain?.GetHashCode() ?? 0) * 397) ^ Shape.GetHashCode());
+        public override int GetHashCode() => unchecked((((Terrain?.GetHashCode() ?? 0) * 397) ^ Shape.GetHashCode()) * 397 ^ (Blurred ? 1 : 0));
 
         public static bool operator ==(TileKey a, TileKey b) => a.Equals(b);
 

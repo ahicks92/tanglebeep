@@ -231,11 +231,13 @@ namespace TangledeepAccess.Controls {
         /// Exploration cursor control, consulted every frame (the cursor is always live). The
         /// speculation ring around K steps the cursor 8-way (+x east, +y north):
         /// <c>u i o / j l / m , .</c> map to NW N NE / W E / SW S SE. Holding Shift turns a ring key
-        /// into a skip (jump to the next terrain/shape change or occupant). K reads the cursor's tile;
+        /// into a skip (jump to the next terrain/shape change or occupant). K reads the cursor's tile
+        /// (short form); Shift+K examines it in full (the game's tooltip, including hazard effects);
         /// Alt+K toggles follow mode; Ctrl+K returns the cursor to the hero. These keys are all
         /// unbound in the forced Default game layout, so claiming them shadows nothing.
         /// </summary>
         public static ModInputAction? CursorKeys() {
+            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             if (Input.GetKeyDown(KeyCode.K)) {
                 bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
                 bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
@@ -245,10 +247,12 @@ namespace TangledeepAccess.Controls {
                 if (ctrl) {
                     return ModInputAction.Of(ModInputKind.CursorRecenter);
                 }
+                if (shift) {
+                    return ModInputAction.Of(ModInputKind.CursorExamine);
+                }
                 return ModInputAction.Of(ModInputKind.CursorRead);
             }
 
-            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             if (Input.GetKeyDown(KeyCode.U)) {
                 return Ring(shift, -1, 1);   // NW
             }

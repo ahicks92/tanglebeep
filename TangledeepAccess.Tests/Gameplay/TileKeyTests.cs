@@ -41,5 +41,26 @@ namespace TangledeepAccess.Tests.Gameplay {
             var prev = new TileKey("ground", Alcove);
             Assert.Null(Changes(new TileKey("ground", Alcove), prev));
         }
+
+        [Fact]
+        public void FullReadMarksBlurredButNotClear() {
+            Assert.Equal("blurred ground", Changes(new TileKey("ground", Open, blurred: true), null));
+            Assert.Equal("ground", Changes(new TileKey("ground", Open, blurred: false), null));
+        }
+
+        [Fact]
+        public void AnnouncesBlurredBoundaryOnceInEitherDirection() {
+            var clear = new TileKey("ground", Open, blurred: false);
+            var blur = new TileKey("ground", Open, blurred: true);
+            Assert.Equal("blurred", Changes(blur, clear));   // entering blur
+            Assert.Equal("clear", Changes(clear, blur));     // leaving blur
+            Assert.Null(Changes(blur, blur));                // unchanged: nothing
+        }
+
+        [Fact]
+        public void BlurredChangeLeadsTerrainAndShapeChanges() {
+            var prev = new TileKey("ground", Open, blurred: false);
+            Assert.Equal("blurred water north alcove", Changes(new TileKey("water", Alcove, blurred: true), prev));
+        }
     }
 }

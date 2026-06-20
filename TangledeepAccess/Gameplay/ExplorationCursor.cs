@@ -36,6 +36,9 @@ namespace TangledeepAccess.Gameplay {
                 case ModInputKind.CursorRead:
                     spoken = ExplorationCursor.ReadCursor();
                     break;
+                case ModInputKind.CursorExamine:
+                    spoken = ExplorationCursor.ExamineCursor();
+                    break;
                 case ModInputKind.CursorFollowToggle:
                     spoken = ExplorationCursor.ToggleFollow();
                     break;
@@ -69,8 +72,11 @@ namespace TangledeepAccess.Gameplay {
     /// tile, but a stationary peek persists (the snap fires only on a real hero move). Only Alt+K
     /// toggles follow; speculation, skip, and the programmatic <see cref="JumpTo"/> leave it alone.</para>
     ///
-    /// <para>Line of sight is respected: an out-of-sight tile reads "not visible" and plays no cue, so
-    /// the cursor never reveals what the hero cannot see. State is plain ints on the main thread.</para>
+    /// <para>Visibility follows the minimap, not line of sight: the cursor reads any <em>explored</em>
+    /// tile (terrain, shape, and live occupants — minimap parity), and an explored tile that is not
+    /// currently in sight is tagged "blurred" (tracked differentially, announced once on the boundary).
+    /// Only a truly <em>unexplored</em> tile reads "unexplored" and plays no cue. State is plain ints
+    /// on the main thread.</para>
     /// </summary>
     internal static class ExplorationCursor {
         private static bool _initialized;
@@ -158,8 +164,8 @@ namespace TangledeepAccess.Gameplay {
                 return null;
             }
 
-            // A run is defined relative to the start tile; if that is unseen, just do a single step.
-            if (!InSight(hero, _x, _y)) {
+            // A run is defined relative to the start tile; if that is unexplored, just do a single step.
+            if (!Visibility.Explored(_x, _y)) {
                 return Step(dx, dy);
             }
 
@@ -173,8 +179,8 @@ namespace TangledeepAccess.Gameplay {
                 if (tx < 0 || tx >= map.columns || ty < 0 || ty >= map.rows) {
                     break; // map edge
                 }
-                if (!InSight(hero, tx, ty)) {
-                    break; // don't skip into fog
+                if (!Visibility.Explored(tx, ty)) {
+                    break; // don't skip into the unexplored unknown
                 }
 
                 var tp = new Vector2(tx, ty);
@@ -213,6 +219,38 @@ namespace TangledeepAccess.Gameplay {
 
             var message = new MessageBuilder();
             AppendRead(message, differential: false, withCoords: true, playCues: false);
+            return message;
+        }
+
+        /// <summary>
+        /// Examine the cursor's tile in full — the game's own tooltip (Shift+K): full monster stats, or
+        /// terrain plus its hazard effect ("mud, chance to root on step"). Coordinates lead; a blurred
+        /// tile is tagged; an unexplored tile reads "unexplored".
+        /// </summary>
+        public static MessageBuilder ExamineCursor() {
+            HeroPC hero = GameMasterScript.heroPCActor;
+            Map map = MapMasterScript.activeMap;
+            if (hero == null || map == null) {
+                return null;
+            }
+
+            var message = new MessageBuilder();
+            var pos = new Vector2(_x, _y);
+            message.PushRelativeCoordinates(pos - hero.GetPos());
+            message.ListItem();
+
+            if (!Visibility.Explored(_x, _y)) {
+                message.Fragment("unexplored");
+                return message;
+            }
+            if (Visibility.Blurred(_x, _y)) {
+                message.Fragment("blurred");
+            }
+
+            MapTileData tile = MapMasterScript.GetTile(pos);
+            string full = TileDescriber.Examine(tile);
+            message.Fragment(string.IsNullOrEmpty(full) ? TileDescriber.Terrain(tile) : full);
+            TileDescriber.AppendItems(message, tile);
             return message;
         }
 
@@ -279,8 +317,8 @@ namespace TangledeepAccess.Gameplay {
                 message.ListItem(); // subsequent content is a new, comma-separated item
             }
 
-            if (!InSight(hero, _x, _y)) {
-                message.Fragment("not visible");
+            if (!Visibility.Explored(_x, _y)) {
+                message.Fragment("unexplored");
                 _lastKey = null;
                 return;
             }
@@ -323,7 +361,8 @@ namespace TangledeepAccess.Gameplay {
             TileShape shape = Impassable(pos, tile)
                 ? new TileShape(TileShapeKind.Open, Direction.None, 0)
                 : ShapeAt(pos);
-            return new TileKey(TileDescriber.Terrain(tile), shape);
+            bool blurred = Visibility.Blurred((int)pos.x, (int)pos.y);
+            return new TileKey(TileDescriber.Terrain(tile), shape, blurred);
         }
 
         private static bool Impassable(Vector2 pos, MapTileData tile) {
@@ -343,18 +382,13 @@ namespace TangledeepAccess.Gameplay {
             Vector2 pos = hero.GetPos();
             int x = (int)pos.x;
             int y = (int)pos.y;
-            _lastKey = InSight(hero, x, y) ? KeyAt(pos, MapMasterScript.GetTile(pos)) : (TileKey?)null;
+            _lastKey = Visibility.Explored(x, y) ? KeyAt(pos, MapMasterScript.GetTile(pos)) : (TileKey?)null;
         }
 
         private static void CenterOnHero(HeroPC hero) {
             Vector2 p = hero.GetPos();
             _x = (int)p.x;
             _y = (int)p.y;
-        }
-
-        private static bool InSight(HeroPC hero, int x, int y) {
-            bool[,] v = hero.visibleTilesArray;
-            return v != null && x >= 0 && y >= 0 && x < v.GetLength(0) && y < v.GetLength(1) && v[x, y];
         }
     }
 }
