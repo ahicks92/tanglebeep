@@ -46,6 +46,13 @@ namespace TangledeepAccess.Ui.Graph {
         /// <see cref="OverlayCtx.Arg"/>.</summary>
         public Action<OverlayCtx> OnAssignHotbar;
 
+        /// <summary>Optional. An auxiliary overlay this node opened (via
+        /// <see cref="IOverlayController.OpenAuxiliary"/>) committed; its scalar result arrives in
+        /// <see cref="OverlayCtx.Arg"/>. The node runs the action with its <i>live</i> state from the
+        /// current rebuild — the aux carries no closure of its own. Fires only on commit, not on a
+        /// cancel-close.</summary>
+        public Action<OverlayCtx> OnAuxCommit;
+
         /// <summary>Optional. Horizontal value adjust (a slider). When set, left/right do NOT
         /// navigate — they call this with sign -1 (left/decrease) or +1 (right/increase), and
         /// <c>large</c> true for a coarse Shift/skip step. null => left/right navigate normally.</summary>

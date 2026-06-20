@@ -22,6 +22,17 @@ namespace TangledeepAccess.Controls {
         /// <summary>Confirm / activate the focused control (menus).</summary>
         Confirm,
 
+        /// <summary>Confirm a destructive / confirmation-required action — Ctrl+Enter. Activates the
+        /// focused control like <see cref="Confirm"/>, but the dispatcher invokes the control with
+        /// <see cref="Ui.Modifiers.Control"/> set, so a node can gate an action that first warns on a
+        /// plain Enter (e.g. selling a favorited item) and only proceeds on this.</summary>
+        DangerousConfirm,
+
+        /// <summary>Cancel / back out without acting (Escape). Dismisses an auxiliary overlay (e.g. a
+        /// quantity prompt) back to its parent. Claimed only while an aux owns input, so a normal
+        /// screen's Escape still passes through to the game to close that screen.</summary>
+        Cancel,
+
         /// <summary>Read detailed info about the focused control (menus) — the equivalent of the
         /// game's hover tooltip. Distinct from Confirm, which is the primary action (use/equip).</summary>
         ReadInfo,

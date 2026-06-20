@@ -48,6 +48,19 @@ namespace TangledeepAccess.Ui {
         private ControlId _lastSpoken;
         private object _pendingGameFocus;
 
+        // The active auxiliary overlay session, or null. While set, ticks route to the aux (anchored
+        // to a node of the main overlay) instead of the normal handler stack; see TickAux.
+        private AuxSession _aux;
+
+        // A live auxiliary overlay: the modal sub-overlay, plus the main overlay it is anchored to
+        // (by id, for its focus cache) and the anchor node's key (whose OnAuxCommit fires on commit).
+        private sealed class AuxSession {
+            public IUiOverlay Main;
+            public OverlayId MainId;
+            public ControlId Anchor;
+            public IUiOverlay Aux;
+        }
+
         /// <summary>
         /// True when the active overlay declared that it owns keyboard input, via
         /// <see cref="IOverlayBuilder.CaptureInput"/>. A static property of the overlay, decided
@@ -56,6 +69,11 @@ namespace TangledeepAccess.Ui {
         /// <see cref="Tick"/>; one frame stale is fine for a persistent menu.
         /// </summary>
         public bool CapturesInput { get; private set; }
+
+        /// <summary>True while an auxiliary overlay (opened via <see cref="IOverlayController.OpenAuxiliary"/>)
+        /// owns the tick. The input layer reads this to claim Escape as an aux-cancel only then,
+        /// leaving a normal screen's Escape to the game.</summary>
+        public bool AuxActive => _aux != null;
 
         /// <summary>Register a handler. The last one registered sits at the top of the stack.</summary>
         public void Register(OverlayHandler handler) {
@@ -78,6 +96,12 @@ namespace TangledeepAccess.Ui {
         /// because overlay callbacks read live game state.
         /// </summary>
         public TickResult Tick(ModInputAction? command = null) {
+            // An open auxiliary overlay owns the tick: it drives its own focus while the main
+            // overlay's cache is preserved underneath. See TickAux.
+            if (_aux != null) {
+                return TickAux(command);
+            }
+
             OverlayResult result = FindActive();
 
             bool hasActive = result != null && result.Kind != OverlayResultKind.Inactive;
@@ -112,19 +136,33 @@ namespace TangledeepAccess.Ui {
         /// on the main thread, since node labels read live game state.
         /// </summary>
         internal string Describe() {
-            OverlayResult result = FindActive();
-            if (result == null || result.Kind == OverlayResultKind.Inactive) {
-                return "overlay: none\n";
-            }
-            if (result.Kind == OverlayResultKind.Sleeping) {
-                return "overlay: " + result.Id + " (sleeping - not rendering yet)\n";
+            // An open auxiliary overlay owns the screen; describe it (with a banner naming the main
+            // overlay it is anchored to) rather than the handler stack underneath.
+            IUiOverlay overlay;
+            OverlayId id;
+            string banner = null;
+            if (_aux != null) {
+                overlay = _aux.Aux;
+                id = _aux.Aux.Id;
+                banner = "auxiliary over " + _aux.MainId + "\n";
+            } else {
+                OverlayResult result = FindActive();
+                if (result == null || result.Kind == OverlayResultKind.Inactive) {
+                    return "overlay: none\n";
+                }
+                if (result.Kind == OverlayResultKind.Sleeping) {
+                    return "overlay: " + result.Id + " (sleeping - not rendering yet)\n";
+                }
+
+                overlay = result.Overlay;
+                id = result.Id;
             }
 
             var ctx = new OverlayCtx(new MessageBuilder(), Modifiers.None);
-            GraphRender render = BuildRender(result.Overlay, ctx);
+            GraphRender render = BuildRender(overlay, ctx);
 
             GraphState state;
-            _cache.TryGetValue(result.Overlay.Id, out state);
+            _cache.TryGetValue(id, out state);
             ControlId current = state != null && state.CurKey != null ? state.CurKey : render.StartKey;
 
             var labels = new Dictionary<ControlId, string>();
@@ -133,7 +171,11 @@ namespace TangledeepAccess.Ui {
             }
 
             var sb = new StringBuilder();
-            sb.Append("overlay: ").Append(result.Id)
+            if (banner != null) {
+                sb.Append(banner);
+            }
+
+            sb.Append("overlay: ").Append(id)
                 .Append(" (nodes=").Append(render.Nodes.Count)
                 .Append(", capturesInput=").Append(render.ForceCapture).Append(")\n");
             foreach (KeyValuePair<ControlId, GraphNode> kv in render.Nodes) {
@@ -214,7 +256,21 @@ namespace TangledeepAccess.Ui {
             CapturesInput = graph.Current.ForceCapture;
 
             if (command.HasValue) {
-                return ApplyNav(graph, state, ctx, message, command.Value);
+                TickResult navResult = ApplyNav(graph, state, ctx, message, command.Value);
+
+                // A node action may have opened an auxiliary overlay (OpenAuxiliary). Capture the
+                // session, anchored to the node that opened it; subsequent ticks route to TickAux.
+                if (graph.PendingAux != null) {
+                    _aux = new AuxSession {
+                        Main = overlay,
+                        MainId = overlay.Id,
+                        Anchor = graph.PendingAuxAnchor,
+                        Aux = graph.PendingAux,
+                    };
+                    CapturesInput = true;
+                }
+
+                return navResult;
             }
 
             // An overlay that captures input (CaptureInput, i.e. ForceCapture) drives its own
@@ -225,6 +281,103 @@ namespace TangledeepAccess.Ui {
             return Follow(graph, state, ctx, message, graph.Current.ForceCapture ? null : gameFocus);
         }
 
+        // Drive one tick while an auxiliary overlay is open. The aux owns input and focus; the main
+        // overlay underneath is rebuilt only to confirm it (and the anchor node) still exist.
+        private TickResult TickAux(ModInputAction? command) {
+            // Game focus is irrelevant while the (capturing) aux owns input; drop any pending edge.
+            _pendingGameFocus = null;
+
+            AuxSession aux = _aux;
+
+            // 1. The main overlay must still be live and still contain the anchor node, or the aux is
+            // orphaned: tear it down and fall back to normal handling.
+            GraphState mainState;
+            if (!_cache.TryGetValue(aux.MainId, out mainState)) {
+                _aux = null;
+                return Tick(command);
+            }
+
+            var probe = new KeyGraph(c => BuildRender(aux.Main, c), mainState);
+            if (!probe.Rerender(new OverlayCtx(new MessageBuilder(), Modifiers.None))
+                || !probe.Current.Nodes.ContainsKey(aux.Anchor)) {
+                _aux = null;
+                return Tick(command);
+            }
+
+            // 2. Build + process the aux overlay against its own cache slot.
+            GraphState auxState;
+            if (!_cache.TryGetValue(aux.Aux.Id, out auxState)) {
+                auxState = new GraphState();
+                _cache[aux.Aux.Id] = auxState;
+            }
+
+            var message = new MessageBuilder();
+            var ctx = new OverlayCtx(message, Modifiers.None);
+            var auxGraph = new KeyGraph(c => BuildRender(aux.Aux, c), auxState);
+            if (!auxGraph.Rerender(ctx)) {
+                // The aux built nothing this tick — treat as a cancel-close.
+                return CloseAux(aux, mainState, null);
+            }
+
+            CapturesInput = auxGraph.Current.ForceCapture;
+            _hasActiveLast = true;
+            _activeLast = aux.Aux.Id;
+
+            // Escape cancels the aux (no commit) and returns to the parent's anchor.
+            if (command.HasValue && command.Value.Kind == ModInputKind.Cancel) {
+                return CloseAux(aux, mainState, null);
+            }
+
+            TickResult result = command.HasValue
+                ? ApplyNav(auxGraph, auxState, ctx, message, command.Value)
+                : Follow(auxGraph, auxState, ctx, message, null);
+
+            // A commit delivers a result to the anchor's OnAuxCommit; a plain close is a cancel.
+            if (auxGraph.AuxCommitRequested) {
+                return CloseAux(aux, mainState, auxGraph.AuxResult);
+            }
+            if (auxGraph.Closed) {
+                return CloseAux(aux, mainState, null);
+            }
+
+            return result;
+        }
+
+        // Tear down the aux session and resume the main overlay focused on the anchor, silently. On a
+        // commit, run the anchor node's OnAuxCommit against a fresh rebuild of the main (live state)
+        // with the committed scalar in ctx.Arg; the transaction's own game-log line carries the
+        // spoken result, so OnAuxCommit usually appends nothing.
+        private TickResult CloseAux(AuxSession aux, GraphState mainState, int? commitResult) {
+            _aux = null;
+            _cache.Remove(aux.Aux.Id);
+            _subId.Remove(aux.Aux.Id);
+
+            var result = new TickResult();
+
+            if (commitResult.HasValue) {
+                var message = new MessageBuilder();
+                var ctx = new OverlayCtx(message, Modifiers.None) { Arg = commitResult.Value };
+                var mainGraph = new KeyGraph(c => BuildRender(aux.Main, c), mainState);
+                if (mainGraph.Rerender(ctx)) {
+                    GraphNode anchor;
+                    if (mainGraph.Current.Nodes.TryGetValue(aux.Anchor, out anchor)
+                        && anchor.Vtable.OnAuxCommit != null) {
+                        anchor.Vtable.OnAuxCommit(ctx);
+                    }
+                }
+
+                result.Message = message;
+            }
+
+            // Resume the main overlay on the anchor next tick, without re-announcing it.
+            mainState.NextSuggestedMove = aux.Anchor;
+            _hasActiveLast = true;
+            _activeLast = aux.MainId;
+            _lastSpoken = aux.Anchor;
+            CapturesInput = true;
+            return result;
+        }
+
         private TickResult ApplyNav(
             KeyGraph graph,
             GraphState state,
@@ -233,6 +386,12 @@ namespace TangledeepAccess.Ui {
             ModInputAction command
         ) {
             var result = new TickResult();
+
+            // Cancel is meaningful only to an open auxiliary overlay (handled in TickAux); reaching
+            // here means no aux is up, so it is a no-op rather than falling through to a stray move.
+            if (command.Kind == ModInputKind.Cancel) {
+                return result;
+            }
 
             // Carry the command's integer payload (e.g. the AssignHotbar slot) to the node action.
             ctx.Arg = command.Dx;
@@ -248,7 +407,7 @@ namespace TangledeepAccess.Ui {
                 return result;
             }
 
-            if (command.Kind == ModInputKind.Confirm) {
+            if (command.Kind == ModInputKind.Confirm || command.Kind == ModInputKind.DangerousConfirm) {
                 ControlId cur = state.CurKey;
                 GraphNode node = null;
                 if (cur != null) {
@@ -258,8 +417,13 @@ namespace TangledeepAccess.Ui {
                 bool hasModHandler = node != null && node.Vtable.OnClick != null;
 
                 if (hasModHandler) {
-                    // Mod-side control: run its handler; the game is not involved.
-                    graph.Click(ctx, Modifiers.None);
+                    // Mod-side control: run its handler; the game is not involved. Ctrl+Enter
+                    // (DangerousConfirm) was genuinely held with Ctrl, so report Modifiers.Control —
+                    // a node gates a confirmation-required action on it.
+                    Modifiers mods = command.Kind == ModInputKind.DangerousConfirm
+                        ? new Modifiers { Control = true }
+                        : Modifiers.None;
+                    graph.Click(ctx, mods);
                     result.Message = message;
                 } else {
                     // Game-backed pass-through: let the caller confirm it through the game.

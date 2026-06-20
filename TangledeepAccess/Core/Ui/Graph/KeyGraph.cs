@@ -40,12 +40,28 @@ namespace TangledeepAccess.Ui.Graph {
         /// <summary>The most recently built render, or null if not yet rendered / closed.</summary>
         public GraphRender Current => _current;
 
-        /// <summary>True if a callback asked the graph to close.</summary>
+        /// <summary>True if a callback asked the graph to close (a plain close / aux cancel).</summary>
         public bool Closed => _controller.Closed;
+
+        /// <summary>An auxiliary overlay a callback asked to open this tick, or null.</summary>
+        public IUiOverlay PendingAux => _controller.PendingAux;
+
+        /// <summary>The focused control the pending auxiliary is anchored to (its open-time cursor).</summary>
+        public ControlId PendingAuxAnchor => _controller.PendingAuxAnchor;
+
+        /// <summary>True if an aux callback asked to commit (vs cancel) this tick.</summary>
+        public bool AuxCommitRequested => _controller.AuxCommitRequested;
+
+        /// <summary>The scalar result an aux callback committed (valid when <see cref="AuxCommitRequested"/>).</summary>
+        public int AuxResult => _controller.AuxResult;
 
         private sealed class Controller : IOverlayController {
             private readonly GraphState _state;
             public bool Closed;
+            public IUiOverlay PendingAux;
+            public ControlId PendingAuxAnchor;
+            public bool AuxCommitRequested;
+            public int AuxResult;
 
             public Controller(GraphState state) {
                 _state = state;
@@ -54,6 +70,17 @@ namespace TangledeepAccess.Ui.Graph {
             public void Close() => Closed = true;
 
             public void SuggestMove(ControlId key) => _state.NextSuggestedMove = key;
+
+            public void OpenAuxiliary(IUiOverlay aux) {
+                PendingAux = aux;
+                PendingAuxAnchor = _state.CurKey;
+            }
+
+            public void CommitAuxiliary(int result) {
+                AuxCommitRequested = true;
+                AuxResult = result;
+                Closed = true;
+            }
         }
 
         /// <summary>

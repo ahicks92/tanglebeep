@@ -32,7 +32,11 @@ namespace TangledeepAccess.Controls {
                 return Nav(shift, 1, 0);
             }
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) {
-                return ModInputAction.Of(ModInputKind.Confirm);
+                // Ctrl+Enter is the "dangerous"/confirmation-required variant: a node that warns on a
+                // plain Enter (e.g. selling a favorited item) proceeds only on this. The screen
+                // reader's Ctrl "stop" only silences speech, so the combo is free to claim.
+                bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                return ModInputAction.Of(ctrl ? ModInputKind.DangerousConfirm : ModInputKind.Confirm);
             }
             if (Input.GetKeyDown(KeyCode.K)) {
                 // Ctrl+K is the second read channel (e.g. the equipment sheet's item comparison);
@@ -66,6 +70,15 @@ namespace TangledeepAccess.Controls {
         // A menu direction: a plain step, or a skip-to-edge when Shift is held.
         private static ModInputAction Nav(bool shift, int dx, int dy) {
             return shift ? ModInputAction.MoveToEdge(dx, dy) : ModInputAction.Move(dx, dy);
+        }
+
+        /// <summary>
+        /// The cancel/back key (Escape) for menu overlays. Consulted by the menu drainer only while an
+        /// auxiliary overlay owns input, so on a normal screen Escape still passes through to the game
+        /// to close that screen.
+        /// </summary>
+        public static ModInputAction? MenuCancel() {
+            return Input.GetKeyDown(KeyCode.Escape) ? ModInputAction.Of(ModInputKind.Cancel) : (ModInputAction?)null;
         }
 
         /// <summary>

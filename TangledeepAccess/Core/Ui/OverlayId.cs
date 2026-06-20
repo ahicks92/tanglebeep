@@ -32,5 +32,12 @@ namespace TangledeepAccess.Ui {
         Shop,
 
         // Mod-only UIs (no game widget) go below here as they are added.
+
+        // The generic cache slot for whatever auxiliary (modal sub-) overlay is currently open — a
+        // concrete instance anchored to a parent node, e.g. a "how many?" quantity slider. A single
+        // sentinel, not a per-aux-type id: the aux is an actual parameterized instance pushed via
+        // IOverlayController.OpenAuxiliary (never registered as a handler), and only one aux is live
+        // at a time, so they share this one focus-cache slot.
+        Auxiliary,
     }
 }

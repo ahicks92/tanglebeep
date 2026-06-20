@@ -53,6 +53,16 @@ namespace TangledeepAccess.Dev {
                 case "ok":
                     action = ModInputAction.Of(ModInputKind.Confirm);
                     break;
+                case "dangerousconfirm":
+                case "ctrlenter":
+                case "dconfirm":
+                    action = ModInputAction.Of(ModInputKind.DangerousConfirm);
+                    break;
+                case "cancel":
+                case "escape":
+                case "back":
+                    action = ModInputAction.Of(ModInputKind.Cancel);
+                    break;
                 case "readinfo":
                 case "info":
                 case "read":
@@ -82,7 +92,7 @@ namespace TangledeepAccess.Dev {
                     break;
                 default:
                     return "[unknown verb] '" + verb
-                        + "' - menu: up|down|left|right|confirm|readinfo|readsecondary|favorite|trash|1-8|cycle|hotbar\n";
+                        + "' - menu: up|down|left|right|confirm|dangerousconfirm|cancel|readinfo|readsecondary|favorite|trash|1-8|cycle|hotbar\n";
             }
 
             OverlayDispatcher dispatcher = UiRuntime.Dispatcher;

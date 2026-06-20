@@ -23,6 +23,17 @@ namespace TangledeepAccess.Ui {
                 return false; // claim nothing this frame — the game runs normally
             }
 
+            // While an auxiliary overlay (e.g. a quantity prompt) owns input, Escape cancels just it
+            // and returns to the parent — claimed here so it does not leak to the game and close the
+            // whole underlying screen. A normal screen's Escape is left to the game (not claimed).
+            if (dispatcher.AuxActive) {
+                ModInputAction? cancel = InputKeys.MenuCancel();
+                if (cancel.HasValue) {
+                    InputQueue.Enqueue(this, cancel.Value);
+                    return true;
+                }
+            }
+
             ModInputAction? action = InputKeys.MenuNav();
             if (action.HasValue) {
                 InputQueue.Enqueue(this, action.Value);

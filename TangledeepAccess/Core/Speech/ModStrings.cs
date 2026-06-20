@@ -197,5 +197,52 @@ namespace TangledeepAccess.Speech {
 
         /// <summary>The dialog portrait/illustration control's label (no description yet).</summary>
         public const string Image = "image";
+
+        // --- Shop ------------------------------------------------------------------------------
+
+        // Sort buttons (the shop offers only these two).
+        public const string SortByType = "sort by type";
+        public const string SortByValue = "sort by value";
+
+        /// <summary>The buy-screen header anchor, e.g. "buying from Katie Twinkles".</summary>
+        public static string ShopBuying(string merchant) {
+            return "buying from " + merchant;
+        }
+
+        /// <summary>The sell-screen header anchor, e.g. "selling to Katie Twinkles".</summary>
+        public static string ShopSelling(string merchant) {
+            return "selling to " + merchant;
+        }
+
+        /// <summary>A gold amount for prices and money, e.g. "50 gold".</summary>
+        public static string Gold(int amount) {
+            return amount + " gold";
+        }
+
+        /// <summary>How many of an item the hero already owns, e.g. "you own 2".</summary>
+        public static string Owned(int count) {
+            return "you own " + count;
+        }
+
+        /// <summary>The item count in the header, e.g. "13 items".</summary>
+        public static string ItemCount(int count) {
+            return count + (count == 1 ? " item" : " items");
+        }
+
+        /// <summary>Spoken on a buy the hero cannot afford.</summary>
+        public const string TooExpensive = "too expensive";
+
+        /// <summary>Spoken when there is no equipment to compare a shop item against.</summary>
+        public const string NothingToCompareShop = "nothing to compare";
+
+        /// <summary>The favorited-item sell guard: a plain Enter warns, Ctrl+Enter proceeds.</summary>
+        public const string FavoriteSellConfirm = "favorited item, press control enter to confirm";
+
+        // --- Quantity prompt (auxiliary overlay) -----------------------------------------------
+
+        /// <summary>The quantity slider's label, e.g. "how many? 5".</summary>
+        public static string HowMany(int count) {
+            return "how many? " + count;
+        }
     }
 }

@@ -15,7 +15,9 @@ namespace TangledeepAccess.Ui {
     /// graph engine; do not construct directly. Kept minimal — grows as behaviors land.
     /// </summary>
     public interface IOverlayController {
-        /// <summary>Close this overlay (the dispatcher drops its focus cache).</summary>
+        /// <summary>Close this overlay (the dispatcher drops its focus cache). For an auxiliary
+        /// overlay this is a plain <i>cancel</i>: it closes and refocuses the main overlay's anchor
+        /// node without firing the anchor's <see cref="Graph.NodeVtable.OnAuxCommit"/>.</summary>
         void Close();
 
         /// <summary>
@@ -23,6 +25,21 @@ namespace TangledeepAccess.Ui {
         /// render, if that control still exists. Used when an action restructures the UI.
         /// </summary>
         void SuggestMove(ControlId key);
+
+        /// <summary>
+        /// Open <paramref name="aux"/> as an auxiliary (modal) overlay anchored to the focused
+        /// control of the current overlay. While it is open, input drives the aux; the main overlay's
+        /// focus is preserved and restored when the aux closes. The aux carries no commit closure —
+        /// it reports a scalar result via <see cref="CommitAuxiliary"/>.
+        /// </summary>
+        void OpenAuxiliary(IUiOverlay aux);
+
+        /// <summary>
+        /// Close the active auxiliary overlay and deliver <paramref name="result"/> to the anchor
+        /// node's <see cref="Graph.NodeVtable.OnAuxCommit"/> (which runs against the main overlay's
+        /// live state on its next rebuild). Called from an aux node's own action.
+        /// </summary>
+        void CommitAuxiliary(int result);
     }
 
     /// <summary>
