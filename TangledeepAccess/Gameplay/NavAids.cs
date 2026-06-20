@@ -56,7 +56,7 @@ namespace TangledeepAccess.Gameplay {
         private static readonly WallEchoAid Wall = new WallEchoAid();
         private static readonly NavAid[] Aids = {
             Wall,             // F1
-            new ScannerAid(), // F2
+            new ObjectRadar(), // F2
         };
 
         /// <summary>Whether wall echo's auto-on-move is enabled (Shift+F1). Read by <see cref="CombatRadar"/>.</summary>

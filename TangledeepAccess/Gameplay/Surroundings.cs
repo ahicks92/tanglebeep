@@ -16,7 +16,7 @@ namespace TangledeepAccess.Gameplay {
     /// <summary>
     /// Collects everything in the hero's line of sight — actors (NPCs, monsters, stairs,
     /// destructibles) from <c>actorsInMap</c> plus ground items on visible tiles — as a list of
-    /// <see cref="Poi"/>. Drives the F2 entity radar (<see cref="ScannerAid"/>), which pings the
+    /// <see cref="Poi"/>. Drives the F2 object radar (<see cref="ObjectRadar"/>), which pings the
     /// whole set; the textual scanner builds its own explored-map snapshot, not this. Terrain is the
     /// exception: it is clustered (over in-sight tiles, the same <see cref="TerrainClusterer"/> the
     /// scanner uses on explored tiles) into one Poi per pool at its nearest point, so a water field

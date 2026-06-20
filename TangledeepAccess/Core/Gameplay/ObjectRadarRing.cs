@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace TangledeepAccess.Gameplay {
     /// <summary>
-    /// The scanner's rotating list of entities to ping, one per cadence tick. Entities are
+    /// The object radar's rotating list of entities to ping, one per cadence tick. Entities are
     /// identified by reference (the underlying game object), so a thing that merely moves keeps its
     /// slot with refreshed coordinates, while a genuinely new thing is inserted at the cursor — the
     /// next to play — so it pings right away instead of waiting at the back of the queue. Reconcile
@@ -13,7 +13,7 @@ namespace TangledeepAccess.Gameplay {
     /// mid-lap still playing next — it folds into sort order only on the following lap. Pure (Core):
     /// identity is by reference, payload is integer tile offsets, so it tests without the engine.
     /// </summary>
-    public sealed class ScanRing {
+    public sealed class ObjectRadarRing {
         public struct Entry {
             public object Id;
             public int X;

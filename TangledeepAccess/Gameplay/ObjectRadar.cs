@@ -5,20 +5,20 @@ using UnityEngine;
 
 namespace TangledeepAccess.Gameplay {
     /// <summary>
-    /// Entity scanner (F2): a continuous sweep of everything in line of sight. Ctrl+F2 toggles it on
+    /// Object radar (F2): a continuous sweep of everything in line of sight. Ctrl+F2 toggles it on
     /// or off (off by default); there is no Shift+F2 — it is a pure toggle, not a per-event aid. While
     /// on, it pings one visible entity every <see cref="ScanCue.IntervalSeconds"/>, encoding its
     /// left-right offset as pan and its north-south offset as the reference/second-grain interval.
-    /// A <see cref="ScanRing"/> keeps the rotation: entities that move keep their slot, newcomers jump
-    /// to the front so they are heard at once. Reconciles at each ping (cheap, and a newcomer found
+    /// An <see cref="ObjectRadarRing"/> keeps the rotation: entities that move keep their slot, newcomers
+    /// jump to the front so they are heard at once. Reconciles at each ping (cheap, and a newcomer found
     /// then is played immediately).
     /// </summary>
-    internal sealed class ScannerAid : NavAid {
-        private readonly ScanRing _ring = new ScanRing();
-        private readonly List<ScanRing.Entry> _current = new List<ScanRing.Entry>();
+    internal sealed class ObjectRadar : NavAid {
+        private readonly ObjectRadarRing _ring = new ObjectRadarRing();
+        private readonly List<ObjectRadarRing.Entry> _current = new List<ObjectRadarRing.Entry>();
         private double _timer;
 
-        public ScannerAid() : base("scanner", enabled: false) { }
+        public ObjectRadar() : base("object radar", enabled: false) { }
 
         public override MessageBuilder OnCtrl() {
             MessageBuilder spoken = ToggleSpoken();
@@ -47,7 +47,7 @@ namespace TangledeepAccess.Gameplay {
             _timer = 0.0;
 
             Reconcile(hero);
-            ScanRing.Entry? next = _ring.Next();
+            ObjectRadarRing.Entry? next = _ring.Next();
             if (next.HasValue) {
                 TonePlayer.PlayTimeline(VoicePing(next.Value));
             }
@@ -55,7 +55,7 @@ namespace TangledeepAccess.Gameplay {
 
         // The ping for one entity: its category's radar sample if one is loaded, else the default
         // triangle tone. Both share ScanCue's pan/pitch/level/envelope, so only the timbre differs.
-        private static GrainTimeline VoicePing(ScanRing.Entry e) {
+        private static GrainTimeline VoicePing(ObjectRadarRing.Entry e) {
             if (SampleBank.TryGet(e.Category, out float[] samples, out int sampleRate)) {
                 return ScanCue.BuildSample(e.X, e.Y, samples, sampleRate);
             }
@@ -69,7 +69,7 @@ namespace TangledeepAccess.Gameplay {
             foreach (Poi poi in Surroundings.CollectVisible(hero)) {
                 int x = (int)poi.Pos.x - (int)hp.x;
                 int y = (int)poi.Pos.y - (int)hp.y;
-                _current.Add(new ScanRing.Entry(poi.Handle, x, y, poi.Category));
+                _current.Add(new ObjectRadarRing.Entry(poi.Handle, x, y, poi.Category));
             }
             _ring.Reconcile(_current);
         }
