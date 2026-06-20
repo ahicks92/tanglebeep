@@ -32,7 +32,7 @@ Tangledeep is a turn-based roguelike. This means that nothing happens unless tim
 - You get to game UIs with alt+number keys.
 - A factorio-like scanner exists on home, end, page up, page down
 
-There are a number of navigational aids which add audio cues.  You can learn these by playing the game. The one that is on by default is wall tones. The noise you hear every time you move indicates how far walls are in the 4 cardinal directions.  Navigational aids are toggled with ctrl + the f keys, and can be run exactly once with shift + f keys.  In this case, wall tones are controlled with f1.
+There are a number of navigational aids which add audio cues.  You can learn these by playing the game. The one that is on by default is wall tones. The noise you hear every time you move indicates how far walls are in the 4 cardinal directions.  Navigational aids are toggled with ctrl + the f keys, and can be run exactly once with shift + f keys.  In this case, wall tones are controlled with f1.  There is also an object radar on f2, which sweeps everything in view and pings each thing by direction.
 
 Some announcements are read from your combat log, a feature provided by the game.  You can navigate the combat log with ctrl + brackets.  Some story information goes here as well.
 
@@ -50,27 +50,37 @@ Finally, note that the main menu has some focus issues and text boxes do not wor
 - Move, target: q w e a d z x c, or arrow keys
 - Use flask: semicolon
 - Use town escape: p
-- Toggle between equipped weapons: brackets, or f5-f8 to swap to a slot directly
+- Toggle between equipped weapons: brackets, or f5-f8 to swap to a slot directly (the new weapon and its slot number are announced)
 - Use stairs, confirm: enter
 - Use monster mallet: t
 - Fire ranged weapon: f
 - Use shovel: v
+- Pick up item: g
 - Announce your status (hp, effects, etc): y
+- Read your current tile (map, coordinates, terrain, items, exits): s
+- Repeat the last thing spoken: apostrophe
+- Step through the combat log: ctrl + left bracket / ctrl + right bracket
 - Move the exploration cursor: u i o j l m comma dot
-- Announce your coordinates: s
 - Announce what the exploration cursor is on: k
 - Examine what the exploration cursor is on: shift + k
 - Skip the exploration cursor to a change: shift+cursor keys
 - Toggle whether the exploration cursor returns to your character on move: alt+k
+- Recenter the exploration cursor on your character: ctrl+k
 - Open the game's help system: f1
+
+### Navigation aids
+
+Audio cues you turn on and off. Ctrl + an f-key toggles an aid; shift + the same f-key runs it exactly once.
+
+- Wall echo (on by default): f1 — tones for how far the walls are in the 4 cardinal directions, played as you move
+- Object radar: f2 — sweeps everything in view and pings each thing by direction
 
 ### The Hotbar
 
 The game offers two hotbars that you swap between (note: we will probably mod this to be easier):
 
-- Swap hotbars: backtick
+- Switch hotbar page, reading the new page: backtick
 - Use hotbar slot: 1-8
-- Read hotbar: shift + backtick
 - Assign something to the active hotbar: 1-8 in the appropriate menu with the item selected
 
 You can't clear hotbars, but you can reassign any slot whenever you want.
@@ -102,6 +112,8 @@ Navigating and reading:
 - Move around: arrow keys or movement keys
 - Move as far in a direction as possible: shift +  movement keys
 - Read tooltip: k
-- Compare item to equipped: shift + k
+- Compare item to equipped: ctrl + k
+- Favorite or trash an item: f or minus
+- Confirm past a warning (e.g. selling a favorited item): ctrl + enter
 - Adjust inline sliders: left/right arrow, add shift for bigger increments
 - Close a UI: escape. The game does not always play a sound for this, that's not a mod bug.
