@@ -28,7 +28,7 @@ namespace TangledeepAccess.Overlays {
         }
 
         public void Build(IOverlayBuilder builder) {
-            OwnedChoices.Build(builder, null);
+            OwnedChoices.BuildButtonsOnly(builder);
         }
     }
 }

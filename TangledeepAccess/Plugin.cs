@@ -116,6 +116,15 @@ namespace TangledeepAccess {
                     .Fragment("ready."));
             }
 
+            // A dialog's typewriter is a purely visual reveal: we read the full text immediately, and
+            // the game's confirm path otherwise eats the first press just to finish the typing. Force
+            // every open dialog's text to completion each frame so our reads and confirms act at once.
+            // Outside the overlay system on purpose — Build is re-entrant, so a side effect there
+            // would fire many times per tick.
+            if (UIManagerScript.dialogBoxOpen) {
+                UIManagerScript.FinishTypewriterTextImmediately();
+            }
+
             // Poll the non-keyboard input sources before draining, so any event they emit this
             // frame is realized below in the same pump. The focus watcher edge-detects the game's
             // validated UI focus (stale focus included) and enqueues a FocusChanged event.

@@ -181,5 +181,21 @@ namespace TangledeepAccess.Speech {
         public static string ComparedTo(string equippedName) {
             return "compared to " + equippedName;
         }
+
+        // --- Dialogs ---------------------------------------------------------------------------
+
+        /// <summary>The slider value control's label, e.g. "amount 50". Left/right adjust it.</summary>
+        public static string SliderAmount(int value) {
+            return "amount " + value;
+        }
+
+        /// <summary>The (deferred) free-text entry control's label.</summary>
+        public const string TextBox = "text box";
+
+        /// <summary>Spoken when the player activates a text-entry control we cannot yet drive.</summary>
+        public const string TextBoxUnsupported = "text boxes not yet supported";
+
+        /// <summary>The dialog portrait/illustration control's label (no description yet).</summary>
+        public const string Image = "image";
     }
 }

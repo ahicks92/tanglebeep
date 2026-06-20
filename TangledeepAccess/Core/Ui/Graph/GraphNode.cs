@@ -46,6 +46,11 @@ namespace TangledeepAccess.Ui.Graph {
         /// <see cref="OverlayCtx.Arg"/>.</summary>
         public Action<OverlayCtx> OnAssignHotbar;
 
+        /// <summary>Optional. Horizontal value adjust (a slider). When set, left/right do NOT
+        /// navigate — they call this with sign -1 (left/decrease) or +1 (right/increase), and
+        /// <c>large</c> true for a coarse Shift/skip step. null => left/right navigate normally.</summary>
+        public Action<OverlayCtx, int, bool> OnHorizontalAdjust;
+
         /// <summary>If true, the control is skipped by search.</summary>
         public bool ExcludeFromSearch;
     }

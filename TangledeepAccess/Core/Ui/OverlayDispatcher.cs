@@ -37,6 +37,12 @@ namespace TangledeepAccess.Ui {
         private readonly Dictionary<OverlayId, GraphState> _cache =
             new Dictionary<OverlayId, GraphState>();
 
+        // Per-id last reported subidentity (for overlays implementing ISubIdentified). A change
+        // while the id stays active is an in-place content swap (e.g. a dialog branch switch) and is
+        // treated as a fresh open. Removed alongside the focus cache when the id goes inactive.
+        private readonly Dictionary<OverlayId, string> _subId =
+            new Dictionary<OverlayId, string>();
+
         private bool _hasActiveLast;
         private OverlayId _activeLast;
         private ControlId _lastSpoken;
@@ -81,6 +87,7 @@ namespace TangledeepAccess.Ui {
             // replaced). Sleeping keeps the id active, so no clear.
             if (_hasActiveLast && (!hasActive || !activeId.Equals(_activeLast))) {
                 _cache.Remove(_activeLast);
+                _subId.Remove(_activeLast);
                 _lastSpoken = null;
             }
 
@@ -173,6 +180,22 @@ namespace TangledeepAccess.Ui {
                 _cache[overlay.Id] = state;
             }
 
+            // Generation check: an overlay whose content can change in place (a dialog as its
+            // conversation advances) reports a subidentity. When it changes while the id stays active,
+            // behave as a fresh open — reset focus to the start node and re-announce, ignoring any nav
+            // command this frame so the new content wins over a same-frame keypress.
+            if (overlay is ISubIdentified sub) {
+                string now = sub.SubIdentity();
+                string prev;
+                bool had = _subId.TryGetValue(overlay.Id, out prev);
+                _subId[overlay.Id] = now;
+                if (had && !string.Equals(prev, now)) {
+                    state.CurKey = null;
+                    _lastSpoken = null;
+                    command = null;
+                }
+            }
+
             var message = new MessageBuilder();
             var ctx = new OverlayCtx(message, Modifiers.None);
             var graph = new KeyGraph(c => BuildRender(overlay, c), state);
@@ -180,6 +203,7 @@ namespace TangledeepAccess.Ui {
             if (!graph.Rerender(ctx)) {
                 // The overlay built nothing this tick — treat as closed and drop its cache.
                 _cache.Remove(overlay.Id);
+                _subId.Remove(overlay.Id);
                 _hasActiveLast = false;
                 _lastSpoken = null;
                 CapturesInput = false;
@@ -243,6 +267,16 @@ namespace TangledeepAccess.Ui {
                     result.FocusReference = cur?.Reference;
                 }
 
+                return result;
+            }
+
+            // A value control (a slider) intercepts horizontal input to adjust its value instead of
+            // moving focus: left/right nudge, Shift (MoveToEdge) takes a coarse step. Vertical input
+            // always navigates. The handler plays its own sound and speaks the new value, so this is
+            // not reported as a move.
+            if (command.Dx != 0 && command.Dy == 0
+                && graph.TryHorizontalAdjust(ctx, command.Dx, command.Kind == ModInputKind.MoveToEdge)) {
+                result.Message = message;
                 return result;
             }
 

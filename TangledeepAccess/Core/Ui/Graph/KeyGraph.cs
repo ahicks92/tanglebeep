@@ -325,6 +325,30 @@ namespace TangledeepAccess.Ui.Graph {
         }
 
         /// <summary>
+        /// If the focused control declares a horizontal-adjust handler (a value control such as a
+        /// slider), invoke it for the given direction and step size and return true; otherwise return
+        /// false so the caller does a normal move. Re-renders first. <paramref name="sign"/> is -1 for
+        /// left/decrease, +1 for right/increase; <paramref name="large"/> requests a coarse step.
+        /// </summary>
+        public bool TryHorizontalAdjust(OverlayCtx ctx, int sign, bool large) {
+            if (!Rerender(ctx)) {
+                return false;
+            }
+
+            GraphNode node;
+            if (!_current.Nodes.TryGetValue(_state.CurKey, out node)) {
+                return false;
+            }
+
+            if (node.Vtable.OnHorizontalAdjust == null) {
+                return false;
+            }
+
+            node.Vtable.OnHorizontalAdjust(ctx, sign, large);
+            return true;
+        }
+
+        /// <summary>
         /// Invoke a read-only-style node action on the focused control (re-render first). The
         /// <paramref name="selector"/> picks which <see cref="NodeVtable"/> action to run (read
         /// info, mark favorite, …). Falls back to re-reading the label when the control declares no
