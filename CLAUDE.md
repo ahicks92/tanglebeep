@@ -84,8 +84,8 @@ outside `Core/`.
   **build failure aborts the launch** — you never silently run a stale DLL. So the iteration
   loop is just "restart `run-game.ps1`"; there is no separate build step to forget. Pass
   **`-NoBuild`** to skip the build and launch whatever is already deployed (re-test the exact
-  binary, or restart from a clean state without recompiling). Sets `TANGLEDEEP_DEV=1` to enable
-  the dev driver (below). Relaunch to restart (it kills any leftover instance first).
+  binary, or restart from a clean state without recompiling). The dev driver (below) is on by
+  default, so no env var is needed. Relaunch to restart (it kills any leftover instance first).
   **Prism/NVDA is OFF by default** (`TANGLEDEEP_NO_SPEECH=1`) so headless/overnight runs don't
   depend on a screen reader; spoken text is still captured for `/speech`. Pass `-Speech` to
   voice through NVDA. **`-SaveSlot N`** takes you from cold launch to in-game in one command:
@@ -131,9 +131,10 @@ outside `Core/`.
 
 ## Dev driver (in-process HTTP server) — for iteration, not a player feature
 
-A dev-only HTTP server is **baked into the mod** (`TangledeepAccess/Dev/`), gated behind
-`TANGLEDEEP_DEV=1` (set by `run-game.ps1`); inert in a normal launch. It lets an agent
-introspect and drive the live game over `http://127.0.0.1:8770`. **It is intentionally
+A dev HTTP server is **baked into the mod** (`TangledeepAccess/Dev/`). It is **on by default**
+in every launch and binds **127.0.0.1 only** (reachable from this machine alone); set
+`TANGLEDEEP_NO_DEV=1` to disable it. It lets an agent introspect and drive the live game over
+`http://127.0.0.1:8770`. **It is intentionally
 part of the mod assembly — do NOT isolate it into a separate package/plugin; that is
 settled and out of scope. Don't raise it.** Its dep `Mono.CSharp.dll` (NuGet 4.0.0.143)
 is deployed beside the plugin by `build.ps1`. Speech is tapped at the `PrismSpeech.Speak`

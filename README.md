@@ -1,122 +1,107 @@
 # Tangledeep Access
 
 A screen-reader accessibility mod for **Tangledeep** (Impact Gameworks), aiming
-to make the turn-based roguelike fully playable without vision. Speech is the
-primary interface, via [Prism](https://github.com/ethindp/prism) (a unified
-screen-reader/TTS abstraction) through a hand-written P/Invoke binding.
+to make the turn-based roguelike fully playable by the blind.
 
-Status: **playable.** The full new-game flow speaks (title, save slots, story intros, job /
-feat / name screens), and in-game the mod reads the turn log, tiles, a line-of-sight scan,
-status, hotbar, full-screen panels, shops/NPCs, and ranged targeting — verified end to end
-through descending into the dungeon and fighting a monster. See **Features** and
-**Controls** below; architecture notes are in `docs/`.
+## IMPORTANT: Read this First
 
-## Features
+This is my side project.  My main projects take priority.  That means that this is not as polished as, e.g., Factorio Access, and is opinionated.  Specifically:
 
-- **Spoken menus and dialogs.** A small overlay framework mirrors the game's menus and
-  speaks the focused control as the game moves focus. Modal dialog boxes (NPC dialogue,
-  the new-game story intros, yes/no prompts) read their full body text via a one-shot
-  "announcement" channel, then the choices.
-- **Character creation.** Save-slot panels, the image-only job buttons (each job's full
-  readout — description, difficulty, passive bonuses — is derived and spoken), and the
-  name-entry screen (prompt, current name, job/mode/feats summary; RANDOM re-reads the
-  new name) are all readable.
-- **Turn-by-turn game log.** Combat, status changes, pickups, and NPC barks are spoken as
-  they happen, filtered by the game's own line-of-sight and verbose-log settings.
-- **Movement feedback.** Stepping onto a tile with an item or non-ground terrain announces
-  it automatically; plain empty ground stays silent, so walking is not chatty.
-- **Health warnings.** Crossing below half health, then a quarter, is announced (and re-armed
-  on recovery) — important in a permadeath game.
-- **Full-screen panels.** Inventory, equipment, skills, and the character sheet speak the
-  selected item/ability — its name as you navigate, then its full tooltip (cost, cooldown,
-  effects). Navigate with the game's own keys.
-- **Ranged targeting.** While aiming a ranged weapon or a point/area ability, the target tile
-  is read as the cursor moves — its contents, direction and distance from the hero, and
-  whether it is a valid target.
-- **Shops & NPCs.** Talking to an NPC reads the dialogue and choices; in a shop, each item's
-  details and gold cost are read as you browse.
-- **Tile reading and a scanner.** On demand, read the hero's tile or sweep everything in
-  line of sight by direction and distance (see Controls).
+- You will have to build from source for the foreseeable future
+- Keybinding, gamepads, and the mouse are not supported
+- I may disappear for long periods of time
+- You are getting support for things as I play the game
+- I do not take PRs unless you know me personally
+
+This game also doesn't make a good first game even for the sighted. While not as complicated spatially as something like Factorio, the game itself assumes you know how roguelikes work and does not hold your hand in any way.
+
+And finally this isn't complete.  The game is playable but not everything works and you probably can't yet win. Also I'm still changing things every 5 minutes.
+
+## Installing
+
+You need the .NET CLI and Tangledeep through Steam.  After that run build.ps1 to install the mod.
+
+If this doesn't work tell me why and I'll look into it. That script should find your game as long as it was installed through Steam, build the mod, and then install it.
+
+## Getting Started
+
+Tangledeep is a turn-based roguelike. This means that nothing happens unless time advances, and you have as much time as you want to explore. The mod remaps a bunch of controls, as explained in this readme, and then offers some features.  The basic flow is like this:
+
+- You move with q, w, e, a, d, z, x, c which form a square.  S in the center reads the position of your character
+- You move an exploration cursor with u, i, o, j, l, m, comma, dot.  K in the center announces the position of this cursor.
+- You get to game UIs with alt+number keys.
+- A factorio-like scanner exists on home, end, page up, page down
+
+There are a number of navigational aids which add audio cues.  You can learn these by playing the game. The one that is on by default is wall tones. The noise you hear every time you move indicates how far walls are in the 4 cardinal directions.  Navigational aids are toggled with ctrl + the f keys, and can be run exactly once with shift + f keys.  In this case, wall tones are controlled with f1.
+
+Some announcements are read from your combat log, a feature provided by the game.  You can navigate the combat log with ctrl + brackets.  Some story information goes here as well.
+
+Many things have tooltips.  You read these with `k`.
+
+UIs are like Factorio Access for those who are familiar. For those who aren't, actions and the like often show up on rows adjacent to the item in a menu. That is, moving left and right is as possible as moving up and down.
+
+Finally, note that the main menu has some focus issues and text boxes do not work. This does not pose a major problem, as text boxes are used in very few places and we hack around setting your character's name. This will be fixed.
+
 
 ## Controls
 
-The full, authoritative listing of **both** game and mod controls — both keyboard layouts
-on one line each, plus how non-numpad keyboards do diagonals — is in
-[`docs/controls.md`](docs/controls.md). The mod hotkeys are summarized below.
+### Gameplay and Combat
 
-Mod controls are read as raw key codes (not through the game's Rewired bindings) and are
-chosen from keys the game's **Default** layout leaves unbound, so they do not shadow any game
-action. To keep that guarantee the mod **forces the Default keyboard layout** and does not
-support the **WASD** or custom layouts — if one is active it is coerced back to Default on
-load (and again if you switch it in-game). The mod also evacuates a few keys it claims for
-itself (e.g. it clears **Ctrl**, which belongs to the screen reader, and owns hotbar cycling
-on backtick instead). Menus are navigated with the game's own keys; the mod just speaks them.
+- Move, target: q w e a d z x c, or arrow keys
+- Use flask: semicolon
+- Use town escape: p
+- Toggle between equipped weapons: brackets, or f5-f8 to swap to a slot directly
+- Use stairs, confirm: enter
+- Use monster mallet: t
+- Fire ranged weapon: f
+- Use shovel: v
+- Announce your status (hp, effects, etc): y
+- Move the exploration cursor: u i o j l m comma dot
+- Announce your coordinates: s
+- Announce what the exploration cursor is on: k
+- Examine what the exploration cursor is on: shift + k
+- Skip the exploration cursor to a change: shift+cursor keys
+- Toggle whether the exploration cursor returns to your character on move: alt+k
+- Open the game's help system: f1
 
-- `K` — **Read here**: the hero's tile — map, coordinates, terrain, any items on it, and the
-  open directions you can walk (its "exits").
-- `L` — **Scan**: everything in line of sight, by direction and distance (hostiles first,
-  then nearest).
-- `Y` — **Status**: the hero's health, stamina, energy, level, and active (temporary) effects.
-- `A` — **Hotbar**: the abilities/items bound to the active hotbar page, by slot number.
-- `'` (apostrophe) — **Repeat**: re-speak the last phrase (e.g. a combat line you missed).
-- `;` — **Look cursor**: toggle a tile cursor for examining the map without moving. While
-  it is on, the **arrow keys** (and the **numpad**, including diagonals 7/9/1/3) step the
-  cursor — each tile is read, respecting line of sight — **`]`** / **`[`** jump it to the
-  next / previous thing in view (monster, item, stairs), and **Home** re-centers it on the
-  hero; press `;` again to turn it off.
+### The Hotbar
 
-Ranged targeting, shops/NPCs, movement feedback, and health warnings have no hotkey — they
-speak automatically as you play. During character creation and in menus, navigate with the
-game's own keys; the mod reads each control as focus moves.
+The game offers two hotbars that you swap between (note: we will probably mod this to be easier):
 
-## Layout
+- Swap hotbars: backtick
+- Use hotbar slot: 1-8
+- Read hotbar: shift + backtick
+- Assign something to the active hotbar: 1-8 in the appropriate menu with the item selected
 
-The mod compiles to a **single managed DLL** (plus the native `prism.dll`).
+You can't clear hotbars, but you can reassign any slot whenever you want.
 
-- `TangledeepAccess/` — the BepInEx plugin (net472), the only product assembly.
-  Engine/native glue at the root; engine-agnostic logic (Prism binding, speech wrapper,
-  native loader, logging) under `Core/`, compiled straight in.
-- `TangledeepAccess.Tests/` — offline xUnit tests (net8). Links the plugin's `Core/`
-  sources directly (no product-DLL reference); no game launch.
-- `third_party/prism/` — vendored Prism x64 runtime (`prism.dll`), header, and
-  license. **Committed** for reproducible builds.
-- `third_party/bepinex/` — vendored BepInEx 5.4.23.5 win-x64 (Unity Mono). **Committed.**
-- `artifacts/` — all build output lands here (gitignored), not in per-project `bin`/`obj`.
+### Scanner
 
-The decompiled game source lives **outside** this repo (`../tangledeep-decompiled`)
-and is never committed.
+The mod offers a factorio-like scanner:
 
-## Environment (verified)
+- Move the exploration cursor to the scanner: home
+- Toggle whether the exploration cursor jumps to things as you scan them: alt+home
+- Examine what the scanner is on: shift + home
+- Refresh the scan: end
+- Move between items in a category: page up/down
+- Move between categories: ctrl + page up/down
 
-- Tangledeep is **Unity 2020.3.37f1, Mono, x64**, full .NET 4.x BCL → plugin targets `net472`.
-- Loader: **BepInEx 5.4.23.5 (x64)** + HarmonyX. No entrypoint tweak needed (unlike Unity 5.x).
-- Speech: **Prism v0.16.6** (`prism.dll`, self-contained), cdecl, UTF-8 strings.
-- Requires the .NET SDK (8 or 9) to build; a running screen reader (e.g. NVDA) to hear output.
+## UI
 
-## Build, install, run
+Open with alt + one of the following:
 
-```powershell
-# One-time: install BepInEx into the game folder.
-.\setup-bepinex.ps1
+- Inventory: 1
+- Equipment: 2
+- Skills: 3
+- Character screen: 4
+- Rumors: q (not yet supported)
+- Open the options menu/save/quit: escape from the main game screen
 
-# Build the plugin and deploy it + the Prism runtime into BepInEx\plugins.
-.\build.ps1
+Navigating and reading:
 
-# Run the offline tests.
-.\test.ps1
-
-# Format all C# to one-true-brace style (Roslyn, driven by .editorconfig).
-dotnet format TangledeepAccess.sln
-```
-
-All three scripts auto-locate the Steam install of Tangledeep; override with the
-`TANGLEDEEP_GAME` environment variable.
-
-Then launch Tangledeep (or use `.\run-game.ps1 -Speech`). With a screen reader running you
-should hear "Tangledeep Access \<version\> ready." within a couple seconds, then the title
-menu as you navigate it.
-
-## Logs
-
-- BepInEx: `<game>\BepInEx\LogOutput.log` (mod lines via the BepInEx logger).
-- Unity player log: `%USERPROFILE%\AppData\LocalLow\ImpactGameworks\Tangledeep\Player.log`.
+- Move around: arrow keys or movement keys
+- Move as far in a direction as possible: shift +  movement keys
+- Read tooltip: k
+- Compare item to equipped: shift + k
+- Adjust inline sliders: left/right arrow, add shift for bigger increments
+- Close a UI: escape. The game does not always play a sound for this, that's not a mod bug.
