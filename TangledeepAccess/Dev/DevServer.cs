@@ -8,8 +8,9 @@ using TangledeepAccess.Util;
 
 namespace TangledeepAccess.Dev {
     /// <summary>
-    /// Dev-only in-process driver, gated behind the TANGLEDEEP_DEV env var (set by
-    /// run-game.ps1). Exposes a loopback HTTP server so an external driver can:
+    /// In-process dev driver, on by default (set TANGLEDEEP_NO_DEV=1 to disable). The HTTP
+    /// server binds 127.0.0.1 only (see <see cref="DevHttpServer"/>), so it is reachable from
+    /// this machine alone. Exposes that loopback HTTP server so an external driver can:
     ///   POST /eval         body = C# source, run against the live game (REPL state
     ///                      persists across calls); returns output + result/errors.
     ///   POST /input        body = verb. Drives the GAME's own UIObject focus / hero turns.
@@ -26,7 +27,7 @@ namespace TangledeepAccess.Dev {
     /// thread-safe buffer directly off the HTTP thread. Not shipped to players.
     /// </summary>
     public sealed class DevServer {
-        public const string EnableEnv = "TANGLEDEEP_DEV";
+        public const string DisableEnv = "TANGLEDEEP_NO_DEV";
         public const string PortEnv = "TANGLEDEEP_DEV_PORT";
         private const int DefaultPort = 8770;
 
@@ -43,9 +44,10 @@ namespace TangledeepAccess.Dev {
         private bool _enabled;
         private bool _runInBackgroundForced;
 
-        /// <summary>Stand up the server if TANGLEDEEP_DEV=1; otherwise stay inert.</summary>
+        /// <summary>Stand up the loopback server unless TANGLEDEEP_NO_DEV=1.</summary>
         public void Start() {
-            if (Environment.GetEnvironmentVariable(EnableEnv) != "1") {
+            if (Environment.GetEnvironmentVariable(DisableEnv) == "1") {
+                Log.Info("Dev server disabled (TANGLEDEEP_NO_DEV=1)");
                 return;
             }
 

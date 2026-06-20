@@ -96,7 +96,7 @@ namespace TangledeepAccess {
                 Log.Error("Harmony patch failed: " + e);
             }
 
-            // Dev driver (eval + speech tap). No-op unless TANGLEDEEP_DEV=1.
+            // Dev driver (eval + speech tap). On by default, loopback only; TANGLEDEEP_NO_DEV=1 disables.
             _devServer.Start();
         }
 

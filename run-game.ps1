@@ -131,9 +131,8 @@ if (-not $NoBuild) {
     Write-Host "-NoBuild: launching the already-deployed plugin without rebuilding." -ForegroundColor Yellow
 }
 
-# Enable the in-process dev server (eval + speech tap) for this launch. Inherited
-# by the child process; absent in a normal play launch so no socket is opened.
-$env:TANGLEDEEP_DEV = "1"
+# The in-process dev server (eval + speech tap) is on by default in the mod now (loopback
+# only); no env var is needed to enable it. Set TANGLEDEEP_NO_DEV=1 to disable it instead.
 
 # Default: do NOT load Prism/NVDA, so headless/overnight runs (no screen reader) are robust
 # - a flaky or absent NVDA can't hang or corrupt anything. Spoken text is still captured at
@@ -151,7 +150,7 @@ Write-Host "Launched Tangledeep (PID $($proc.Id)), dev server on http://127.0.0.
 
 # Optional: drive straight into a save slot once the dev server answers, so a single command
 # goes from cold launch to in-game on slot N. The game is already running, so we poll/load here
-# (before the blocking WaitForExit). /loadsave needs the dev server (TANGLEDEEP_DEV=1, set above)
+# (before the blocking WaitForExit). /loadsave needs the dev server (on by default in the mod)
 # and blocks until the gameplay scene is interactive; it also corrects the focus flag. We retry
 # the POST because the server answers /health at the title screen a moment before the title's
 # UIManagerScript is ready to start a load.
