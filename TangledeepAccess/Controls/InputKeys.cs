@@ -118,7 +118,7 @@ namespace TangledeepAccess.Controls {
                 return ModInputAction.Of(ModInputKind.ReadStatus);
             }
             // The H family of in-sight reads, split by modifier: bare H lists monsters, Ctrl+H lists
-            // powerups/items/containers, Alt+H lists terrain. The game's H action (Hide UI) is relocated
+            // treasure (powerups/items/gold/containers), Alt+H lists terrain. The game's H action (Hide UI) is relocated
             // behind Ctrl+Alt+Shift (KeymapPatch), so that one combo still falls through to it; every
             // other H combo is the game's too. Ctrl doubles as the screen reader's stop key, which only
             // silences the prior utterance before ours speaks — fine for Ctrl+H.
@@ -130,7 +130,7 @@ namespace TangledeepAccess.Controls {
                     return ModInputAction.Of(ModInputKind.ReadMonsters);
                 }
                 if (hCtrl && !hAlt && !hShift) {
-                    return ModInputAction.Of(ModInputKind.ReadPowerups);
+                    return ModInputAction.Of(ModInputKind.ReadTreasure);
                 }
                 if (hAlt && !hCtrl && !hShift) {
                     return ModInputAction.Of(ModInputKind.ReadTerrain);

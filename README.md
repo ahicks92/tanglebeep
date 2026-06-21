@@ -61,7 +61,7 @@ Finally, note that the main menu has some focus issues and text boxes do not wor
 - Repeat the last thing spoken: apostrophe
 - Step through the combat log: ctrl + left bracket / ctrl + right bracket
 - Announce hostiles near you: h
-- Announce powerups, items, and containers near you: ctrl + h
+- Announce treasure near you (powerups, items, gold, and containers): ctrl + h
 - Announce terrain near you: alt + h
 - Move the exploration cursor: u i o j l m comma dot
 - Announce what the exploration cursor is on: k

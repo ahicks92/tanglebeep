@@ -76,9 +76,10 @@ namespace TangledeepAccess.Controls {
         /// its short name and screen-relative offset (H). Threat overview, no HP/attitude detail.</summary>
         ReadMonsters,
 
-        /// <summary>Read every powerup, ground item, and breakable container in line of sight, in the
-        /// same nearest-first name-and-offset form as <see cref="ReadMonsters"/> (Ctrl+H).</summary>
-        ReadPowerups,
+        /// <summary>Read all treasure in line of sight — powerups, ground items, gold piles, and
+        /// breakable containers — in the same nearest-first name-and-offset form as
+        /// <see cref="ReadMonsters"/> (Ctrl+H).</summary>
+        ReadTreasure,
 
         /// <summary>Read every terrain feature (water, lava, …) in line of sight, clustered into one
         /// entry per pool at its nearest cell, same form as <see cref="ReadMonsters"/> (Alt+H).</summary>

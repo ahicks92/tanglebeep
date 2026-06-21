@@ -78,8 +78,8 @@ namespace TangledeepAccess.Gameplay {
                 case ModInputKind.ReadMonsters:
                     ReadMonsters(message, hero);
                     break;
-                case ModInputKind.ReadPowerups:
-                    ReadPowerups(message, hero);
+                case ModInputKind.ReadTreasure:
+                    ReadTreasure(message, hero);
                     break;
                 case ModInputKind.ReadTerrain:
                     ReadTerrain(message, hero);
@@ -166,12 +166,12 @@ namespace TangledeepAccess.Gameplay {
         }
 
         /// <summary>
-        /// Every powerup, ground item, and breakable container in line of sight (Ctrl+H), in the same
-        /// nearest-first name-and-offset form as <see cref="ReadMonsters"/>. Reuses the radar's
-        /// <see cref="Surroundings.CollectVisible"/> snapshot (which already dedupes and classifies),
-        /// keeping only the powerup/container voices.
+        /// All treasure in line of sight (Ctrl+H) — powerups, ground items, gold piles, and breakable
+        /// containers — in the same nearest-first name-and-offset form as <see cref="ReadMonsters"/>.
+        /// Reuses the radar's <see cref="Surroundings.CollectVisible"/> snapshot (which already dedupes
+        /// and classifies), keeping only the pickup (powerup/gold/item) and container voices.
         /// </summary>
-        private static void ReadPowerups(MessageBuilder message, HeroPC hero) {
+        private static void ReadTreasure(MessageBuilder message, HeroPC hero) {
             Vector2 hp = hero.GetPos();
             int hx = (int)hp.x;
             int hy = (int)hp.y;
@@ -187,7 +187,7 @@ namespace TangledeepAccess.Gameplay {
                 found.Add((poi.Name, dx, dy, Math.Abs(dx) + Math.Abs(dy)));
             }
 
-            Emit(message, found, "no powerups or containers in sight");
+            Emit(message, found, "no treasure in sight");
         }
 
         /// <summary>

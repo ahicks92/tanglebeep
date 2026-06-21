@@ -43,7 +43,12 @@ namespace TangledeepAccess.Gameplay {
                     continue;
                 }
 
-                string name = GameLabelReader.Clean(actor.displayName) ?? SpecialActorName(actor);
+                // Gold piles (obj_coins destructibles) are walked over, not attacked, and carry an
+                // empty displayName, so the generic name filter would drop them. Name them by their
+                // value so the treasure read can speak "47 gold" rather than nothing.
+                string name = actor is Destructible coins && coins.moneyHeld > 0
+                    ? coins.moneyHeld + " gold"
+                    : GameLabelReader.Clean(actor.displayName) ?? SpecialActorName(actor);
                 if (name != null && seen.Add(Key(name, p))) {
                     found.Add(Make(name, actor.actorfaction == Faction.ENEMY, hp, p, actor, Classify(actor)));
                 }
@@ -128,7 +133,8 @@ namespace TangledeepAccess.Gameplay {
         }
 
         // The radar voice category for an actor, from its game type. Monsters, stairs/portals, and
-        // powerups map straight from the actor type; a destructible is a container only when it is a
+        // powerups map straight from the actor type; a gold pile (a destructible holding money) is a
+        // pickup, so it shares the powerup voice; a destructible is a container only when it is a
         // breakable (targetable) non-terrain object — crates and pots, not props, fountains, or terrain;
         // an NPC is a "shop" only when it actually runs a shop (a non-empty shopRef). Everything else
         // (doors, props, story NPCs, terrain) falls back to the default triangle tone.
@@ -145,9 +151,15 @@ namespace TangledeepAccess.Gameplay {
                         ? RadarCategory.Shop
                         : RadarCategory.Default;
                 case ActorTypes.DESTRUCTIBLE:
-                    return actor is Destructible d && d.targetable && !d.isTerrainTile
-                        ? RadarCategory.Container
-                        : RadarCategory.Default;
+                    if (actor is Destructible d) {
+                        if (d.moneyHeld > 0) {
+                            return RadarCategory.Powerup; // gold pile — a pickup, not a breakable
+                        }
+                        if (d.targetable && !d.isTerrainTile) {
+                            return RadarCategory.Container;
+                        }
+                    }
+                    return RadarCategory.Default;
                 default:
                     return RadarCategory.Default;
             }
