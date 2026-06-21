@@ -78,6 +78,12 @@ namespace TangledeepAccess.Gameplay {
                 case ModInputKind.ReadMonsters:
                     ReadMonsters(message, hero);
                     break;
+                case ModInputKind.ReadPowerups:
+                    ReadPowerups(message, hero);
+                    break;
+                case ModInputKind.ReadTerrain:
+                    ReadTerrain(message, hero);
+                    break;
                 case ModInputKind.LogHistoryPrev:
                     GameEventLog.AppendOlder(message);
                     break;
@@ -126,7 +132,7 @@ namespace TangledeepAccess.Gameplay {
             message.PushFraction(cur, max, unit);
         }
 
-        // --- Monsters in sight (H) ---
+        // --- In-sight reads (the H family) ---
 
         /// <summary>
         /// Every monster the hero can currently see, nearest first by Manhattan distance, each spoken as
@@ -156,12 +162,64 @@ namespace TangledeepAccess.Gameplay {
                 found.Add((name, dx, dy, Math.Abs(dx) + Math.Abs(dy)));
             }
 
+            Emit(message, found, "no monsters in sight");
+        }
+
+        /// <summary>
+        /// Every powerup, ground item, and breakable container in line of sight (Ctrl+H), in the same
+        /// nearest-first name-and-offset form as <see cref="ReadMonsters"/>. Reuses the radar's
+        /// <see cref="Surroundings.CollectVisible"/> snapshot (which already dedupes and classifies),
+        /// keeping only the powerup/container voices.
+        /// </summary>
+        private static void ReadPowerups(MessageBuilder message, HeroPC hero) {
+            Vector2 hp = hero.GetPos();
+            int hx = (int)hp.x;
+            int hy = (int)hp.y;
+
+            var found = new List<(string Name, int Dx, int Dy, int Dist)>();
+            foreach (Poi poi in Surroundings.CollectVisible(hero)) {
+                if (poi.Category != RadarCategory.Powerup && poi.Category != RadarCategory.Container) {
+                    continue;
+                }
+
+                int dx = (int)poi.Pos.x - hx;
+                int dy = (int)poi.Pos.y - hy;
+                found.Add((poi.Name, dx, dy, Math.Abs(dx) + Math.Abs(dy)));
+            }
+
+            Emit(message, found, "no powerups or containers in sight");
+        }
+
+        /// <summary>
+        /// Every terrain feature in line of sight (Alt+H), clustered into one entry per pool at its
+        /// nearest cell (the same clustering the radar and scanner use), in the nearest-first
+        /// name-and-offset form of <see cref="ReadMonsters"/>.
+        /// </summary>
+        private static void ReadTerrain(MessageBuilder message, HeroPC hero) {
+            Vector2 hp = hero.GetPos();
+            int hx = (int)hp.x;
+            int hy = (int)hp.y;
+
+            var found = new List<(string Name, int Dx, int Dy, int Dist)>();
+            foreach (TerrainCluster cluster in TerrainFeature.Cluster(MapMasterScript.activeMap, Visibility.VisibleNow)) {
+                TerrainCell near = cluster.NearestCellTo(hx, hy);
+                int dx = near.X - hx;
+                int dy = near.Y - hy;
+                found.Add((TerrainFeature.Name(cluster.Kind), dx, dy, Math.Abs(dx) + Math.Abs(dy)));
+            }
+
+            Emit(message, found, "no terrain in sight");
+        }
+
+        // Speak an in-sight list nearest-first (Manhattan distance, ties broken by offset for a stable,
+        // deterministic read), each entry as its name plus screen-relative offset; the empty phrase when
+        // nothing matched. The shared tail of every H-family read.
+        private static void Emit(MessageBuilder message, List<(string Name, int Dx, int Dy, int Dist)> found, string emptyPhrase) {
             if (found.Count == 0) {
-                message.Fragment("no monsters in sight");
+                message.Fragment(emptyPhrase);
                 return;
             }
 
-            // Nearest first by Manhattan distance; ties broken by offset for a stable, deterministic read.
             found.Sort((l, r) => l.Dist != r.Dist ? l.Dist - r.Dist : l.Dx != r.Dx ? l.Dx - r.Dx : l.Dy - r.Dy);
 
             foreach ((string name, int dx, int dy, int _) in found) {
