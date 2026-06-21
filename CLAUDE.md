@@ -291,3 +291,8 @@ per frame from the pump.
   Announce each enemy action as it happens; don't assume lockstep turns.
 - Don't over-null-check — let it crash where null isn't expected (a crash is visible).
   Comments describe current state, not change history.
+
+
+## Adding and Changing Features
+
+When adding a key, moving a key, removing a key, or changing a feature from how it works in vanilla, you must read README.md and make sure that it is up to date.
