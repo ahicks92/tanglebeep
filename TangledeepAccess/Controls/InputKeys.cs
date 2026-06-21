@@ -72,6 +72,14 @@ namespace TangledeepAccess.Controls {
             return shift ? ModInputAction.MoveToEdge(dx, dy) : ModInputAction.Move(dx, dy);
         }
 
+        // True while any Ctrl/Alt/Shift is held — lets a bare-key claim leave the modified combos
+        // (e.g. a game action relocated behind Ctrl+Alt+Shift) to the game.
+        private static bool AnyModifierHeld() {
+            return Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
+                || Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)
+                || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+        }
+
         /// <summary>
         /// The cancel/back key (Escape) for menu overlays. Consulted by the menu drainer only while an
         /// auxiliary overlay owns input, so on a normal screen Escape still passes through to the game
@@ -112,6 +120,11 @@ namespace TangledeepAccess.Controls {
             }
             if (Input.GetKeyDown(KeyCode.Y)) {
                 return ModInputAction.Of(ModInputKind.ReadStatus);
+            }
+            // H lists the monsters in sight. Bare key only: the game's H action is relocated behind
+            // Ctrl+Alt+Shift (KeymapPatch), so a modified H still reaches it rather than scanning.
+            if (Input.GetKeyDown(KeyCode.H) && !AnyModifierHeld()) {
+                return ModInputAction.Of(ModInputKind.ReadMonsters);
             }
             if (Input.GetKeyDown(KeyCode.Quote)) {
                 return ModInputAction.Of(ModInputKind.RepeatLast);

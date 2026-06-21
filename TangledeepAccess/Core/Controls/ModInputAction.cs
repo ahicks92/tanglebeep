@@ -64,6 +64,10 @@ namespace TangledeepAccess.Controls {
         ReadStatus,
         ReadHotbar,
 
+        /// <summary>Read every monster in line of sight, nearest first by Manhattan distance, each as
+        /// its short name and screen-relative offset (H). Threat overview, no HP/attitude detail.</summary>
+        ReadMonsters,
+
         /// <summary>Cycle to the next hotbar page and read it. The mod owns this on backtick because
         /// the game's own "Cycle Hotbars" defaults to Ctrl, which the screen reader claims.</summary>
         CycleHotbar,

@@ -131,6 +131,7 @@ namespace TangledeepAccess.Controls {
             // Kept but shoved out of the way behind Ctrl+Alt+Shift, freeing the bare letter.
             KeyEvac.MoveTo(KeyCode.M, KeyCode.M, CtrlAltShift),   // Toggle Monster Health Bars
             KeyEvac.MoveTo(KeyCode.O, KeyCode.O, CtrlAltShift),   // Toggle Pet HUD
+            KeyEvac.MoveTo(KeyCode.H, KeyCode.H, CtrlAltShift),   // Hide UI; bare H freed for the monster scan
 
             KeyEvac.Delete(KeyCode.X),                        // Examine Mode (replaced by the mod's look cursor)
             KeyEvac.Delete(KeyCode.S),                        // View Skills duplicate (also on J)

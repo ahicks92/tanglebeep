@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using TangledeepAccess.Controls;
 using TangledeepAccess.Focus;
 using TangledeepAccess.Speech;
@@ -73,6 +75,9 @@ namespace TangledeepAccess.Gameplay {
                 case ModInputKind.ReadStatus:
                     ReadStatus(message, hero);
                     break;
+                case ModInputKind.ReadMonsters:
+                    ReadMonsters(message, hero);
+                    break;
                 case ModInputKind.LogHistoryPrev:
                     GameEventLog.AppendOlder(message);
                     break;
@@ -119,6 +124,50 @@ namespace TangledeepAccess.Gameplay {
             int cur = (int)stats.GetStat(stat, StatDataTypes.CUR);
             int max = (int)stats.GetStat(stat, StatDataTypes.MAX);
             message.PushFraction(cur, max, unit);
+        }
+
+        // --- Monsters in sight (H) ---
+
+        /// <summary>
+        /// Every monster the hero can currently see, nearest first by Manhattan distance, each spoken as
+        /// its short name and screen-relative offset ("slime 3 right, 2 up"), comma-separated. Name +
+        /// distance only — no HP or attitude; that detail is the cursor's and scanner's job. Re-queries
+        /// live and respects line of sight via <see cref="Visibility.VisibleNow"/>.
+        /// </summary>
+        private static void ReadMonsters(MessageBuilder message, HeroPC hero) {
+            Vector2 hp = hero.GetPos();
+            int hx = (int)hp.x;
+            int hy = (int)hp.y;
+
+            var found = new List<(string Name, int Dx, int Dy, int Dist)>();
+            foreach (Actor a in MapMasterScript.activeMap.actorsInMap) {
+                if (a == hero || ActorPresence.IsGone(a) || a.GetActorType() != ActorTypes.MONSTER) {
+                    continue;
+                }
+
+                Vector2 p = a.GetPos();
+                if (!Visibility.VisibleNow(p)) {
+                    continue; // only what the hero can actually see right now
+                }
+
+                int dx = (int)p.x - hx;
+                int dy = (int)p.y - hy;
+                string name = GameLabelReader.Clean(a.displayName) ?? a.actorRefName;
+                found.Add((name, dx, dy, Math.Abs(dx) + Math.Abs(dy)));
+            }
+
+            if (found.Count == 0) {
+                message.Fragment("no monsters in sight");
+                return;
+            }
+
+            // Nearest first by Manhattan distance; ties broken by offset for a stable, deterministic read.
+            found.Sort((l, r) => l.Dist != r.Dist ? l.Dist - r.Dist : l.Dx != r.Dx ? l.Dx - r.Dx : l.Dy - r.Dy);
+
+            foreach ((string name, int dx, int dy, int _) in found) {
+                message.ListItem(name);
+                message.PushRelativeCoordinates(new Vector2(dx, dy));
+            }
         }
 
         // --- Read here ---
