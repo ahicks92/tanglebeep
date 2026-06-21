@@ -19,19 +19,19 @@ namespace TangledeepAccess.Audio {
         public const double ReferenceFrequencyHz = 440.0;
 
         /// <summary>Semitones the second grain is shifted per tile of y (north positive); the y → pitch map.</summary>
-        public const double SemitonesPerTileY = 2.0;
+        public const double SemitonesPerTileY = 1.3;
 
         /// <summary>x at this many tiles pans fully; beyond it clamps. The x → pan map.</summary>
         public const double MaxPanTiles = 8.0;
 
         /// <summary>Constant delay of the second grain after the reference (may be shorter than a grain: overlap).</summary>
-        public const double GapSeconds = 0.1;
+        public const double GapSeconds = 0.05;
 
         /// <summary>Gain of each grain. Fixed — distance is carried by pan+pitch, not volume.</summary>
         public const double Volume = 0.2;
 
         /// <summary>Cadence: seconds between pinging successive entities in the sweep.</summary>
-        public const double IntervalSeconds = 0.5;
+        public const double IntervalSeconds = 0.3;
 
         // Envelope shared by both grains (their fixed "configuration"). The attack is kept near-zero
         // because this same envelope currently also wraps the percussive sample-based radar pings

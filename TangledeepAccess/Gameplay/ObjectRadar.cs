@@ -19,7 +19,7 @@ namespace TangledeepAccess.Gameplay {
     internal sealed class ObjectRadar : NavAid {
         // Tunable: the pause between the end of one sweep and the start of the next (continuous mode).
         // The within-sweep ping spacing is ScanCue.IntervalSeconds; this is the longer gap between sweeps.
-        private const double RestSeconds = 1.5;
+        private const double RestSeconds = 0.5;
 
         private enum Phase {
             Idle,     // nothing running (continuous off, no one-shot in flight)
