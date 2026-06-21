@@ -132,18 +132,24 @@ namespace TangledeepAccess.Gameplay {
             };
         }
 
-        // The radar voice category for an actor, from its game type. Monsters, stairs/portals, and
-        // powerups map straight from the actor type; a gold pile (a destructible holding money) is a
-        // pickup, so it shares the powerup voice; a destructible is a container only when it is a
-        // breakable (targetable) non-terrain object — crates and pots, not props, fountains, or terrain;
-        // an NPC is a "shop" only when it actually runs a shop (a non-empty shopRef). Everything else
-        // (doors, props, story NPCs, terrain) falls back to the default triangle tone.
+        // The radar voice category for an actor, from its game type — which also decides whether the
+        // points-of-interest read (Ctrl+H) speaks it. Monsters, stairs/portals, and ground items map
+        // straight from the actor type (an ITEM actor is a floor pickup → powerup). Most interactable
+        // map features are DESTRUCTIBLE actors distinguished by their SpecialMapObject role, not by the
+        // targetable/terrain flags: energy/stamina powerups, treasure sparkles, journal pages (a
+        // STORYOBJECT), gold piles (MONEY / moneyHeld) and regen fountains and prayer altars all read
+        // off mapObjType. A destructible with no special role is a container only when it is a breakable
+        // (targetable) non-terrain object — crates, pots, chests, not props or terrain. An NPC is a
+        // "shop" only when it actually runs a shop (a non-empty shopRef). Everything else (doors, props,
+        // story NPCs, terrain) falls back to the default triangle tone and is omitted from the PoI read.
         private static RadarCategory Classify(Actor actor) {
             switch (actor.GetActorType()) {
                 case ActorTypes.MONSTER:
                     return RadarCategory.Monster;
                 case ActorTypes.STAIRS:
                     return RadarCategory.Stairs;
+                case ActorTypes.ITEM:
+                    return RadarCategory.Powerup; // an item lying on the floor — a pickup
                 case ActorTypes.POWERUP:
                     return RadarCategory.Powerup;
                 case ActorTypes.NPC:
@@ -154,6 +160,17 @@ namespace TangledeepAccess.Gameplay {
                     if (actor is Destructible d) {
                         if (d.moneyHeld > 0) {
                             return RadarCategory.Powerup; // gold pile — a pickup, not a breakable
+                        }
+                        switch (d.mapObjType) {
+                            case SpecialMapObject.MONEY:
+                            case SpecialMapObject.POWERUP:        // energy / stamina globe
+                            case SpecialMapObject.TREASURESPARKLE: // sparkling treasure
+                            case SpecialMapObject.STORYOBJECT:     // journal page
+                                return RadarCategory.Powerup;
+                            case SpecialMapObject.FOUNTAIN:
+                                return RadarCategory.Fountain;
+                            case SpecialMapObject.ALTAR:
+                                return RadarCategory.Altar;
                         }
                         if (d.targetable && !d.isTerrainTile) {
                             return RadarCategory.Container;

@@ -95,8 +95,8 @@ namespace TangledeepAccess.Gameplay {
                 case ModInputKind.ReadMonsters:
                     ReadMonsters(message, hero);
                     break;
-                case ModInputKind.ReadTreasure:
-                    ReadTreasure(message, hero);
+                case ModInputKind.ReadPointsOfInterest:
+                    ReadPointsOfInterest(message, hero);
                     break;
                 case ModInputKind.ReadTerrain:
                     ReadTerrain(message, hero);
@@ -190,19 +190,21 @@ namespace TangledeepAccess.Gameplay {
         }
 
         /// <summary>
-        /// All treasure in line of sight (Ctrl+H) — powerups, ground items, gold piles, and breakable
-        /// containers — in the same nearest-first name-and-offset form as <see cref="ReadMonsters"/>.
-        /// Reuses the radar's <see cref="Surroundings.CollectVisible"/> snapshot (which already dedupes
-        /// and classifies), keeping only the pickup (powerup/gold/item) and container voices.
+        /// Every important non-monster, non-NPC point of interest in line of sight (Ctrl+H) — pickups
+        /// (energy/stamina powerups, treasure sparkles, ground items, gold piles, journal pages),
+        /// breakable containers, regen fountains, prayer altars, and stairs/portals — in the same
+        /// nearest-first name-and-offset form as <see cref="ReadMonsters"/>. Reuses the radar's
+        /// <see cref="Surroundings.CollectVisible"/> snapshot (which already dedupes and classifies),
+        /// keeping every voice except the default tone, monsters, and shops (those NPCs are out of scope).
         /// </summary>
-        private static void ReadTreasure(MessageBuilder message, HeroPC hero) {
+        private static void ReadPointsOfInterest(MessageBuilder message, HeroPC hero) {
             Vector2 hp = hero.GetPos();
             int hx = (int)hp.x;
             int hy = (int)hp.y;
 
             var found = new List<(string Name, int Dx, int Dy, int Dist)>();
             foreach (Poi poi in Surroundings.CollectVisible(hero)) {
-                if (poi.Category != RadarCategory.Powerup && poi.Category != RadarCategory.Container) {
+                if (!IsPointOfInterest(poi.Category)) {
                     continue;
                 }
 
@@ -211,7 +213,21 @@ namespace TangledeepAccess.Gameplay {
                 found.Add((poi.Name, dx, dy, Math.Abs(dx) + Math.Abs(dy)));
             }
 
-            Emit(message, found, "no treasure in sight");
+            Emit(message, found, "no points of interest in sight");
+        }
+
+        // A scanned entity belongs in the points-of-interest read when its category is a real feature —
+        // anything but the default triangle tone (props/doors/uninteresting terrain), monsters (their
+        // own H read), and shops (NPCs, out of scope for this read).
+        private static bool IsPointOfInterest(RadarCategory category) {
+            switch (category) {
+                case RadarCategory.Default:
+                case RadarCategory.Monster:
+                case RadarCategory.Shop:
+                    return false;
+                default:
+                    return true;
+            }
         }
 
         /// <summary>
