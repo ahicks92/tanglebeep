@@ -8,10 +8,17 @@ namespace TangledeepAccess.Controls {
     /// Owns the in-game keyboard map so the mod can claim physical keys for itself. Run together
     /// whenever the game (re)builds its keyboard map:
     ///
-    /// <para><b>1. Force the Default layout.</b> Tangledeep ships two keyboard layouts
-    /// (<c>KeyboardControlMaps.DEFAULT</c> and <c>WASD</c>); the mod supports only Default. A
-    /// non-Default layout is switched back via <c>Rewired.LayoutHelper.SwitchLayout</c>
-    /// (gms-independent, safe even at the title screen).</para>
+    /// <para><b>1. Force the Default (numpad) layout.</b> Tangledeep ships two keyboard layouts
+    /// (<c>KeyboardControlMaps.DEFAULT</c> = numpad, and <c>WASD</c>); the mod supports only Default.
+    /// We reload it <i>unconditionally</i> via <c>Rewired.LayoutHelper.SwitchLayout</c>
+    /// (gms-independent, safe even at the title screen) rather than only when a non-Default map is
+    /// detected: a player who picked WASD persists that choice, and the saved map can load
+    /// <i>after</i> our one startup pass — a conditional "switch only if currently non-Default" loses
+    /// that race and leaves WASD live (movement broken). SwitchLayout also heals the Rewired
+    /// persistence (it sets <c>PersistentPlayerSettings…layoutName = "Default"</c> and saves), but the
+    /// game's <i>other</i> store — <c>PlayerOptions.defaultKeyboardMap</c> in <c>preferences.xml</c> —
+    /// is independent, so we additionally force-write that back to Default (see
+    /// <see cref="HealKeyboardPreference"/>); otherwise the wrong choice survives in that file.</para>
     ///
     /// <para><b>2. Evacuate claimed keys (<see cref="Table"/>).</b> The mod reads several keys raw
     /// via <c>UnityEngine.Input</c>; the game's binding on such a key must be cleared so it does not
@@ -33,9 +40,6 @@ namespace TangledeepAccess.Controls {
     /// rebuilds its keyboard map via <c>GameMasterScript_SwitchControlMode_Patch</c>.</para>
     /// </summary>
     internal static class KeymapPatch {
-        // Rewired layout id of the "Default" keyboard layout (WASD is 1). Verified live.
-        private const int DefaultLayoutId = 0;
-
         // Modifier conventions matching the game's own (it binds both sides, e.g. "LeftControl,
         // RightControl"), so either physical modifier key works.
         private const ModifierKeyFlags Alt = ModifierKeyFlags.LeftAlt | ModifierKeyFlags.RightAlt;
@@ -188,6 +192,10 @@ namespace TangledeepAccess.Controls {
                 return;
             }
 
+            // Force the saved keyboard scheme back to Default before touching any map, so a player
+            // who picked WASD (the only other scheme) can't have it reload from preferences.xml.
+            HealKeyboardPreference();
+
             foreach (Player player in ReInput.players.Players) {
                 ForceDefaultLayout(player);
                 ApplyTable(player);
@@ -196,22 +204,34 @@ namespace TangledeepAccess.Controls {
             }
         }
 
-        // Switch the keyboard back to the Default layout if anything else is loaded. Uses
-        // LayoutHelper directly (not GameMasterScript.SwitchControlMode) so it does not re-trigger
-        // the SwitchControlMode patch — no recursion through our own postfix.
-        private static void ForceDefaultLayout(Player player) {
-            bool needsSwitch = false;
-            foreach (ControllerMap map in player.controllers.maps.GetMaps(ControllerType.Keyboard, 0)) {
-                if (map.layoutId != DefaultLayoutId) {
-                    needsSwitch = true;
-                    break;
-                }
+        // Overwrite the game's stored keyboard-scheme choice (PlayerOptions, persisted to
+        // preferences.xml) back to Default. This is a SEPARATE store from the Rewired persistence
+        // that SwitchLayout heals: the game does not call SwitchControlMode on load, so a stale
+        // defaultKeyboardMap here is what lets a player's wrong pick (WASD) resurface across launches.
+        // No-op (and no disk write) once already Default.
+        private static void HealKeyboardPreference() {
+            if (PlayerOptions.defaultKeyboardMap == KeyboardControlMaps.DEFAULT
+                && PlayerOptions.keyboardMap == KeyboardControlMaps.DEFAULT) {
+                return;
             }
 
-            if (needsSwitch) {
-                Log.Info("Forcing keyboard layout to Default (unsupported layout was active)");
-                LayoutHelper.SwitchLayout(player.id, ControllerType.Keyboard, 0, "Default", "Default");
-            }
+            Log.Info(
+                "Healing saved keyboard scheme to Default (numpad); was default="
+                + PlayerOptions.defaultKeyboardMap + ", current=" + PlayerOptions.keyboardMap
+            );
+            PlayerOptions.defaultKeyboardMap = KeyboardControlMaps.DEFAULT;
+            PlayerOptions.keyboardMap = KeyboardControlMaps.DEFAULT;
+            PlayerOptions.WriteOptionsToFile();
+        }
+
+        // Reload the Default (numpad) layout unconditionally. Uses LayoutHelper directly (not
+        // GameMasterScript.SwitchControlMode) so it does not re-trigger the SwitchControlMode patch —
+        // no recursion through our own postfix. Unconditional (not gated on detecting a non-Default
+        // map) because the player's saved WASD map can load after our startup pass; SwitchLayout
+        // reloads the stock Default map and persists layoutName="Default", so re-running it is
+        // idempotent and self-healing.
+        private static void ForceDefaultLayout(Player player) {
+            LayoutHelper.SwitchLayout(player.id, ControllerType.Keyboard, 0, "Default", "Default");
         }
 
         private static void ApplyTable(Player player) {
