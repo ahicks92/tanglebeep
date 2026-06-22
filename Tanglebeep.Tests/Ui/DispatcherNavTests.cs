@@ -1,0 +1,310 @@
+using System;
+using System.Collections.Generic;
+using Tanglebeep.Controls;
+using Tanglebeep.Ui;
+using Tanglebeep.Ui.Graph;
+using Xunit;
+
+namespace Tanglebeep.Tests.Ui {
+    public class DispatcherNavTests {
+        // Game-backed nodes (labels only, no mod handler) identified by real objects.
+        private sealed class RefOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.Inventory;
+            public readonly List<(object Obj, string Name)> Items = new();
+
+            public void Build(IOverlayBuilder builder) {
+                foreach (var (obj, name) in Items) {
+                    string n = name;
+                    builder.AddNode(
+                        ControlId.ForObject(obj),
+                        new NodeVtable { Label = ctx => ctx.Message.Fragment(n) }
+                    );
+                }
+                // Wire a simple vertical chain so navigation has somewhere to go.
+                for (int i = 0; i + 1 < Items.Count; i++) {
+                    ControlId a = ControlId.ForObject(Items[i].Obj);
+                    ControlId b = ControlId.ForObject(Items[i + 1].Obj);
+                    builder.Connect(a, Tanglebeep.Ui.Graph.GraphDir.Down, b);
+                    builder.Connect(b, Tanglebeep.Ui.Graph.GraphDir.Up, a);
+                }
+                builder.SetStart(ControlId.ForObject(Items[0].Obj));
+            }
+        }
+
+        private static RefOverlay TwoItem(out object a, out object b) {
+            a = new object();
+            b = new object();
+            var o = new RefOverlay();
+            o.Items.Add((a, "alpha"));
+            o.Items.Add((b, "beta"));
+            return o;
+        }
+
+        [Fact]
+        public void NavigateMovesCursorReportsMoveAndFocus() {
+            object a,
+                b;
+            var overlay = TwoItem(out a, out b);
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(overlay));
+
+            d.Tick(); // settle at start "alpha"
+            TickResult r = d.Tick(ModInputAction.Move(0, -1)); // down
+
+            Assert.Equal("beta", r.Message?.Build());
+            Assert.True(r.Moved);
+            Assert.Same(b, r.FocusReference);
+        }
+
+        private static RefOverlay ThreeItem(out object a, out object b, out object c) {
+            a = new object();
+            b = new object();
+            c = new object();
+            var o = new RefOverlay();
+            o.Items.Add((a, "alpha"));
+            o.Items.Add((b, "beta"));
+            o.Items.Add((c, "gamma"));
+            return o;
+        }
+
+        [Fact]
+        public void SkipToEdgeJumpsPastIntermediateControls() {
+            object a,
+                b,
+                c;
+            var overlay = ThreeItem(out a, out b, out c);
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(overlay));
+
+            d.Tick(); // settle at start "alpha"
+            TickResult r = d.Tick(ModInputAction.MoveToEdge(0, -1)); // skip down
+
+            Assert.Equal("gamma", r.Message?.Build()); // jumped past "beta" to the last control
+            Assert.True(r.Moved);
+            Assert.Same(c, r.FocusReference);
+        }
+
+        [Fact]
+        public void SkipToEdgeAtEdgeDoesNotReportMove() {
+            object a,
+                b,
+                c;
+            var overlay = ThreeItem(out a, out b, out c);
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(overlay));
+
+            d.Tick(); // at "alpha", top edge
+            TickResult r = d.Tick(ModInputAction.MoveToEdge(0, 1)); // skip up — nothing above
+
+            Assert.False(r.Moved);
+            Assert.Equal("alpha", r.Message?.Build()); // re-read current
+        }
+
+        [Fact]
+        public void NavigateAtEdgeDoesNotReportMove() {
+            object a,
+                b;
+            var overlay = TwoItem(out a, out b);
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(overlay));
+
+            d.Tick(); // at "alpha", top edge
+            TickResult r = d.Tick(ModInputAction.Move(0, 1)); // up
+
+            Assert.False(r.Moved); // nothing above
+            Assert.Equal("alpha", r.Message?.Build()); // re-read current
+        }
+
+        [Fact]
+        public void ActivateGameBackedNodeReportsActivated() {
+            object a,
+                b;
+            var overlay = TwoItem(out a, out b);
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(overlay));
+
+            d.Tick(); // at "alpha"
+            TickResult r = d.Tick(ModInputAction.Of(ModInputKind.Confirm));
+
+            Assert.True(r.Activated);
+            Assert.Same(a, r.FocusReference);
+        }
+
+        [Fact]
+        public void ActivateModNodeRunsHandlerNotGame() {
+            bool clicked = false;
+            var overlay = new ClickOverlay(() => clicked = true);
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(overlay));
+
+            d.Tick();
+            TickResult r = d.Tick(ModInputAction.Of(ModInputKind.Confirm));
+
+            Assert.True(clicked);
+            Assert.False(r.Activated); // mod handled it; the game is not involved
+        }
+
+        // An overlay that declares it owns input, with a single node.
+        private sealed class CaptureOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.JobGrid;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddLabel(ControlId.Structural("only"), ctx => ctx.Message.Fragment("only"));
+                builder.CaptureInput();
+            }
+        }
+
+        [Fact]
+        public void CapturesInputReflectsDeclarationNotNodeCount() {
+            // A multi-node overlay that does NOT declare capture: we do not own input. Node count
+            // no longer implies ownership.
+            object a,
+                b;
+            var twoItem = TwoItem(out a, out b);
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(twoItem));
+            d.Tick();
+            Assert.False(d.CapturesInput);
+
+            // A single-node overlay that calls CaptureInput() owns input.
+            var capturing = new CaptureOverlay();
+            var d2 = new OverlayDispatcher();
+            d2.Register(() => OverlayResult.Active(capturing));
+            d2.Tick();
+            Assert.True(d2.CapturesInput);
+        }
+
+        // One mod-side clickable node (has an OnClick handler).
+        private sealed class ClickOverlay : IUiOverlay {
+            private readonly Action _onClick;
+
+            public ClickOverlay(Action onClick) => _onClick = onClick;
+
+            public OverlayId Id => OverlayId.JobGrid;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddNode(
+                    ControlId.Structural("only"),
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment("only"),
+                        OnClick = (ctx, mods) => _onClick(),
+                    }
+                );
+            }
+        }
+
+        // One node with both a label and a distinct read-info handler, so a ReadInfo command can
+        // be told apart from a label re-read.
+        private sealed class ReadInfoOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.Inventory;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddNode(
+                    ControlId.Structural("only"),
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment("label"),
+                        OnReadInfo = ctx => ctx.Message.Fragment("details"),
+                    }
+                );
+            }
+        }
+
+        [Fact]
+        public void ReadInfoRunsOnReadInfoNotMoveOrActivate() {
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(new ReadInfoOverlay()));
+
+            d.Tick();
+            TickResult r = d.Tick(ModInputAction.Of(ModInputKind.ReadInfo));
+
+            Assert.Equal("details", r.Message?.Build());
+            Assert.False(r.Moved);
+            Assert.False(r.Activated);
+        }
+
+        // A node with a label but no read-info handler: ReadInfo falls back to the label.
+        private sealed class LabelOnlyOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.Inventory;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddLabel(ControlId.Structural("only"), ctx => ctx.Message.Fragment("label"));
+                builder.CaptureInput();
+            }
+        }
+
+        [Fact]
+        public void ReadInfoFallsBackToLabelWhenNoHandler() {
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(new LabelOnlyOverlay()));
+
+            d.Tick();
+            TickResult r = d.Tick(ModInputAction.Of(ModInputKind.ReadInfo));
+
+            Assert.Equal("label", r.Message?.Build());
+            Assert.False(r.Moved);
+            Assert.False(r.Activated);
+        }
+
+        // A node wiring the mark-favorite / mark-trash vtable slots.
+        private sealed class MarkOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.Inventory;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddNode(
+                    ControlId.Structural("only"),
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment("label"),
+                        OnMarkFavorite = ctx => ctx.Message.Fragment("favorited"),
+                        OnMarkTrash = ctx => ctx.Message.Fragment("trashed"),
+                    }
+                );
+                builder.CaptureInput();
+            }
+        }
+
+        [Theory]
+        [InlineData(ModInputKind.MarkFavorite, "favorited")]
+        [InlineData(ModInputKind.MarkTrash, "trashed")]
+        public void MarkActionsRouteToTheirVtableSlot(ModInputKind kind, string expected) {
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(new MarkOverlay()));
+
+            d.Tick();
+            TickResult r = d.Tick(ModInputAction.Of(kind));
+
+            Assert.Equal(expected, r.Message?.Build());
+            Assert.False(r.Moved);
+            Assert.False(r.Activated);
+        }
+
+        // A node whose assign-hotbar handler reads the slot off the context, so we can confirm the
+        // command's Dx payload reaches the action as OverlayCtx.Arg.
+        private sealed class AssignOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.Skills;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddNode(
+                    ControlId.Structural("only"),
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment("label"),
+                        OnAssignHotbar = ctx => ctx.Message.Fragment("slot " + ctx.Arg),
+                    }
+                );
+                builder.CaptureInput();
+            }
+        }
+
+        [Fact]
+        public void AssignHotbarPassesTheSlotThroughCtxArg() {
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(new AssignOverlay()));
+
+            d.Tick();
+            TickResult r = d.Tick(new ModInputAction { Kind = ModInputKind.AssignHotbar, Dx = 5 });
+
+            Assert.Equal("slot 5", r.Message?.Build());
+            Assert.False(r.Moved);
+            Assert.False(r.Activated);
+        }
+    }
+}

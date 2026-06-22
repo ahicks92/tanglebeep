@@ -1,0 +1,34 @@
+using Tanglebeep.Ui;
+
+namespace Tanglebeep.Overlays {
+    /// <summary>
+    /// The narrative title-screen dialogs (the new-game story intros, yes/no prompts). Pumped by
+    /// <c>TitleScreenScript.Update</c>, not the in-game input chokepoint, so we own them: the dialog
+    /// box unraveled into an owned vertical menu via <see cref="OwnedChoices"/>. Captures input so
+    /// navigation is uniform regardless of how the game keys the specific dialog.
+    ///
+    /// <para>This is the catch-all for title dialogs: it claims any open dialog on the title
+    /// screen, and the screen-specific title overlays (the main menu, feat select, save slots)
+    /// are registered above it, so they win on their own screens and this handles what's left —
+    /// the story/narrative dialogs.</para>
+    /// </summary>
+    internal sealed class TitleDialogOverlay : IUiOverlay, ISubIdentified {
+        public OverlayId Id => OverlayId.TitleDialog;
+
+        public OverlayResult Handler() {
+            bool onTitle = GameMasterScript.gmsSingleton != null
+                && GameMasterScript.gmsSingleton.titleScreenGMS;
+            return onTitle && UIManagerScript.dialogBoxOpen
+                ? OverlayResult.Active(this)
+                : OverlayResult.Inactive;
+        }
+
+        public void Build(IOverlayBuilder builder) {
+            OwnedChoices.Build(builder);
+        }
+
+        public string SubIdentity() {
+            return OwnedChoices.SubIdentity();
+        }
+    }
+}

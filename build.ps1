@@ -1,4 +1,4 @@
-# build.ps1 - Build TangledeepAccess and deploy the plugin DLL, its Core
+# build.ps1 - Build Tanglebeep and deploy the plugin DLL, its Core
 # dependency, and the self-contained Prism native runtime (prism.dll) into the
 # game's BepInEx\plugins folder.
 
@@ -51,16 +51,16 @@ if (-not (Test-Path "$Game\BepInEx\core\BepInEx.dll")) {
 }
 
 $PluginsDir  = "$Game\BepInEx\plugins"
-$ProjectDir  = "$PSScriptRoot\TangledeepAccess"
+$ProjectDir  = "$PSScriptRoot\Tanglebeep"
 # UseArtifactsOutput (Directory.Build.props) routes output here:
 # artifacts\bin\<project>\<config-lowercased>\. Core.dll is copied in alongside.
-$BuildDir    = "$PSScriptRoot\artifacts\bin\TangledeepAccess\release"
-$BuildOutput = "$BuildDir\TangledeepAccess.dll"
+$BuildDir    = "$PSScriptRoot\artifacts\bin\Tanglebeep\release"
+$BuildOutput = "$BuildDir\Tanglebeep.dll"
 
 # --- Build ---
 if (-not $NoBuild) {
-    Write-Host "Building TangledeepAccess (game: $Game)..." -ForegroundColor Cyan
-    dotnet build "$ProjectDir\TangledeepAccess.csproj" -c Release
+    Write-Host "Building Tanglebeep (game: $Game)..." -ForegroundColor Cyan
+    dotnet build "$ProjectDir\Tanglebeep.csproj" -c Release
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build FAILED." -ForegroundColor Red
         exit 1
@@ -73,12 +73,12 @@ if (-not (Test-Path $BuildOutput)) {
 }
 
 # --- Deploy into a dedicated subfolder so the mod's files stay grouped ---
-$Dest = "$PluginsDir\TangledeepAccess"
+$Dest = "$PluginsDir\Tanglebeep"
 New-Item -ItemType Directory -Path $Dest -Force | Out-Null
 
 # The mod is a single managed assembly (Core sources compile straight in).
-Copy-Item "$BuildDir\TangledeepAccess.dll" "$Dest\TangledeepAccess.dll" -Force
-Write-Host "Deployed TangledeepAccess.dll to $Dest" -ForegroundColor Green
+Copy-Item "$BuildDir\Tanglebeep.dll" "$Dest\Tanglebeep.dll" -Force
+Write-Host "Deployed Tanglebeep.dll to $Dest" -ForegroundColor Green
 
 # Prism native runtime, co-located with the plugin so NativeLoader can preload it
 # by full path. prism.dll is self-contained (screen-reader clients statically

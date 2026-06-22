@@ -1,4 +1,4 @@
-# Tangledeep Access
+# Tanglebeep
 
 A screen-reader accessibility mod for **Tangledeep** (Impact Gameworks), aiming
 to make the turn-based roguelike fully playable by the blind.

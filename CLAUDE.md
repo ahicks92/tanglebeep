@@ -1,6 +1,6 @@
-# TangledeepAccess - Claude Code Instructions
+# Tanglebeep - Claude Code Instructions
 
-TangledeepAccess makes **Tangledeep** (Impact Gameworks) playable by blind users.
+Tanglebeep makes **Tangledeep** (Impact Gameworks) playable by blind users.
 Speech is the primary interface; there is no visual fallback. If something fails
 silently, speaks stale data, or omits information, the player has no way to know.
 A logged failure is actionable; a silent one is invisible.
@@ -73,8 +73,8 @@ outside `Core/`.
 
 - `setup-bepinex.ps1` — install vendored BepInEx into the game (once per install /
   after a game update wipes it).
-- `build.ps1` — build the plugin and deploy the single managed `TangledeepAccess.dll`
-  plus the native `prism.dll` into `<game>\BepInEx\plugins\TangledeepAccess\`. `-NoBuild`
+- `build.ps1` — build the plugin and deploy the single managed `Tanglebeep.dll`
+  plus the native `prism.dll` into `<game>\BepInEx\plugins\Tanglebeep\`. `-NoBuild`
   skips the build and just redeploys the last-built DLL. (Usually you don't call this
   directly — `run-game.ps1` runs it for you; see below.)
 - `test.ps1` — offline xUnit suite (`dotnet test`), no game/Unity.
@@ -86,7 +86,7 @@ outside `Core/`.
   **`-NoBuild`** to skip the build and launch whatever is already deployed (re-test the exact
   binary, or restart from a clean state without recompiling). The dev driver (below) is on by
   default, so no env var is needed. Relaunch to restart (it kills any leftover instance first).
-  **Prism/NVDA is OFF by default** (`TANGLEDEEP_NO_SPEECH=1`) so headless/overnight runs don't
+  **Prism/NVDA is OFF by default** (`TANGLEBEEP_NO_SPEECH=1`) so headless/overnight runs don't
   depend on a screen reader; spoken text is still captured for `/speech`. Pass `-Speech` to
   voice through NVDA. **`-SaveSlot N`** takes you from cold launch to in-game in one command:
   once the dev server answers it calls the `/loadsave` endpoint for slot N (retrying until the
@@ -97,7 +97,7 @@ outside `Core/`.
     background task is still alive.** Two launchers race the dev-server port (8770): the new
     game can't bind it and exits with code 1, while the second launcher externally kills the
     first's game so that task reports a spurious failure (exit -1/255). To enforce this,
-    `run-game.ps1` takes a single-instance lock (`%TEMP%\tangledeep-run-game.lock`, holds the
+    `run-game.ps1` takes a single-instance lock (`%TEMP%\tanglebeep-run-game.lock`, holds the
     launcher PID) and **refuses** to start if a live launcher holds it; a stale lock (dead
     holder, e.g. a hard-killed launcher) is cleared automatically. The launcher also kills any
     orphaned game and **waits for process exit + port 8770 to free** (≤15s) before starting —
@@ -107,14 +107,14 @@ outside `Core/`.
   `BepInPlugin` literal is generated from it). `LangVersion` 7.3 (safe for Unity Mono).
 - **Build output** for every project goes to a single repo-root `artifacts/` folder
   (`UseArtifactsOutput` in `Directory.Build.props`), NOT per-project `bin`/`obj`. The
-  plugin DLL lands at `artifacts/bin/TangledeepAccess/release/TangledeepAccess.dll`.
+  plugin DLL lands at `artifacts/bin/Tanglebeep/release/Tanglebeep.dll`.
 - **Formatting:** Roslyn's `dotnet format` (ships with the SDK), driven by
   `.editorconfig`. Style is **one-true-brace (1TBS)**: every opening brace cuddles onto
   its construct's line, `else`/`catch`/`finally` cuddle onto the closing brace, and
   single-statement blocks always get braces (IDE0011). 4-space indent. CSharpier was
   dropped — it is Allman-only and cannot emit 1TBS. Note `dotnet format` does NOT reflow
   long lines to a column width the way CSharpier did.
-  - Format the whole tree: `dotnet format TangledeepAccess.sln`. This is the normal
+  - Format the whole tree: `dotnet format Tanglebeep.sln`. This is the normal
     command and is safe — verified idempotent on the converted tree, and adding new
     braceless code then re-formatting solution-wide applies braces cleanly.
   - Rare escape hatch: the `Core/**` sources are `<Compile Include>`-linked into both
@@ -124,16 +124,16 @@ outside `Core/`.
     overwriting. This bit once during the initial cold Allman→1TBS bulk conversion and
     was not reproducible afterward. If you ever see those markers after a format,
     `git checkout` the `.cs` files and format **per project** instead:
-    `dotnet format TangledeepAccess/TangledeepAccess.csproj` (covers all plugin + Core
+    `dotnet format Tanglebeep/Tanglebeep.csproj` (covers all plugin + Core
     files once), then
-    `dotnet format TangledeepAccess.Tests/TangledeepAccess.Tests.csproj --include TangledeepAccess.Tests/`
+    `dotnet format Tanglebeep.Tests/Tanglebeep.Tests.csproj --include Tanglebeep.Tests/`
     (test-own files only, leaving the already-formatted linked Core files untouched).
 
 ## Dev driver (in-process HTTP server) — for iteration, not a player feature
 
-A dev HTTP server is **baked into the mod** (`TangledeepAccess/Dev/`). It is **on by default**
+A dev HTTP server is **baked into the mod** (`Tanglebeep/Dev/`). It is **on by default**
 in every launch and binds **127.0.0.1 only** (reachable from this machine alone); set
-`TANGLEDEEP_NO_DEV=1` to disable it. It lets an agent introspect and drive the live game over
+`TANGLEBEEP_NO_DEV=1` to disable it. It lets an agent introspect and drive the live game over
 `http://127.0.0.1:8770`. **It is intentionally
 part of the mod assembly — do NOT isolate it into a separate package/plugin; that is
 settled and out of scope. Don't raise it.** Its dep `Mono.CSharp.dll` (NuGet 4.0.0.143)
@@ -155,7 +155,7 @@ Endpoints (loopback; drive with `curl`):
   **fully-qualified type names** — a `using X;` followed by statements in one body trips
   Mono.CSharp; (2) eval'd code is its own dynamic assembly, so it sees only **public**
   members of the mod/game — reach `internal`/`private` via reflection
-  (`typeof(TangledeepAccess.Plugin).Assembly.GetType("...")` then `GetField(..., NonPublic)`).
+  (`typeof(Tanglebeep.Plugin).Assembly.GetType("...")` then `GetField(..., NonPublic)`).
 - `GET /speech?since=N` — strings the mod has spoken, with a monotonic cursor; poll
   incrementally. This is how you observe the TTS you can't hear. The tap is upstream of the
   Prism backend, so it works even with speech disabled (the overnight default).
@@ -223,11 +223,11 @@ step to forget. (Drop `-SaveSlot` to stop at the title; load later with `POST /l
 ## Architecture
 
 The mod ships as **one managed assembly**. Two projects:
-- **`TangledeepAccess`** — the BepInEx plugin (net472), the only product assembly.
+- **`Tanglebeep`** — the BepInEx plugin (net472), the only product assembly.
   Engine/native glue (`Plugin`, `LogBepInExBackend`) at the root; engine-agnostic code
   (Prism binding + speech wrapper, native loader, `Log` seam) under **`Core/`**, which
   compiles straight in. References game/BepInEx assemblies.
-- **`TangledeepAccess.Tests`** — **net472** + xUnit (same framework as the plugin, so the
+- **`Tanglebeep.Tests`** — **net472** + xUnit (same framework as the plugin, so the
   linked Core sources are exercised against the exact BCL they ship on, not a net8
   stand-in). References no product DLL: it **links the plugin's `Core/**` sources directly**
   (`<Compile Include>`) and tests them off-engine. The test stack is pinned to
@@ -236,7 +236,7 @@ The mod ships as **one managed assembly**. Two projects:
   6.0.0.0 facade, which the SDK's net472 testhost can't bind, breaking `dotnet test`
   discovery. If you bump these, re-run `test.ps1` and confirm tests are still *discovered*.
 
-**The `Core/` rule:** anything under `TangledeepAccess/Core/` must compile with only the
+**The `Core/` rule:** anything under `Tanglebeep/Core/` must compile with only the
 BCL — no Unity, no BepInEx, no Harmony. The test build enforces this (those files are
 compiled on net472, the plugin's own framework). Engine-touching code lives outside `Core/`.
 This is what keeps the

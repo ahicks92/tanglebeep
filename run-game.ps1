@@ -64,7 +64,7 @@ if (-not (Test-Path $Exe)) {
 # concurrent launch REFUSE instead of stomping. To restart, properly cancel the
 # running run-game background task first (its finally releases this lock), then
 # relaunch. See CLAUDE.md "Restarting the game".
-$LockFile = Join-Path $env:TEMP "tangledeep-run-game.lock"
+$LockFile = Join-Path $env:TEMP "tanglebeep-run-game.lock"
 if (Test-Path $LockFile) {
     $heldPid = (Get-Content $LockFile -ErrorAction SilentlyContinue | Select-Object -First 1)
     $holder = $null
@@ -132,16 +132,16 @@ if (-not $NoBuild) {
 }
 
 # The in-process dev server (eval + speech tap) is on by default in the mod now (loopback
-# only); no env var is needed to enable it. Set TANGLEDEEP_NO_DEV=1 to disable it instead.
+# only); no env var is needed to enable it. Set TANGLEBEEP_NO_DEV=1 to disable it instead.
 
 # Default: do NOT load Prism/NVDA, so headless/overnight runs (no screen reader) are robust
 # - a flaky or absent NVDA can't hang or corrupt anything. Spoken text is still captured at
 # the tap for the /speech endpoint. Pass -Speech to voice through NVDA instead.
 if ($Speech) {
-    Remove-Item Env:\TANGLEDEEP_NO_SPEECH -ErrorAction SilentlyContinue
+    Remove-Item Env:\TANGLEBEEP_NO_SPEECH -ErrorAction SilentlyContinue
     $speechNote = "speech: NVDA"
 } else {
-    $env:TANGLEDEEP_NO_SPEECH = "1"
+    $env:TANGLEBEEP_NO_SPEECH = "1"
     $speechNote = "speech: off (captured for /speech)"
 }
 
