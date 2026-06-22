@@ -70,7 +70,7 @@ Finally, note that the main menu has some focus issues and text boxes do not wor
 - Announce what the exploration cursor is on: k
 - Examine what the exploration cursor is on: shift + k
 - Skip the exploration cursor to a change: shift+cursor keys
-- Toggle whether the exploration cursor returns to your character on move: alt+k
+- Toggle whether the exploration cursor returns to your character each turn: alt+k
 - Recenter the exploration cursor on your character: ctrl+k
 - Open the game's help system: f1
 

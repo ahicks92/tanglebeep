@@ -68,9 +68,10 @@ namespace TangledeepAccess.Gameplay {
     /// stack. See <see cref="CursorSounds"/>.</item>
     /// </list>
     ///
-    /// <para><b>Follow mode</b> (default on): the cursor snaps to the hero whenever the hero changes
-    /// tile, but a stationary peek persists (the snap fires only on a real hero move). Only Alt+K
-    /// toggles follow; speculation, skip, and the programmatic <see cref="JumpTo"/> leave it alone.</para>
+    /// <para><b>Follow mode</b> (default on): the cursor returns to the hero each hero turn (so a
+    /// turn spent standing still still brings it home), and a peek made within a turn persists across
+    /// frames until the next turn returns it. Only Alt+K toggles follow; speculation, skip, and the
+    /// programmatic <see cref="JumpTo"/> leave it alone.</para>
     ///
     /// <para>Visibility follows the minimap, not line of sight: the cursor reads any <em>explored</em>
     /// tile (terrain, shape, and live occupants — minimap parity), and an explored tile that is not
@@ -85,6 +86,7 @@ namespace TangledeepAccess.Gameplay {
         private static bool _follow = true;
         private static int _lastHeroX;
         private static int _lastHeroY;
+        private static int _lastTurn;
         private static Map _lastMap;
 
         // The last tile key we spoke, the baseline for differential speech. Null forces a full read
@@ -96,8 +98,13 @@ namespace TangledeepAccess.Gameplay {
 
         /// <summary>
         /// Per-frame follow upkeep, called from the pump. Centers on the hero on the first in-play
-        /// frame and after a map change, then — while follow is on — resnaps to the hero only when the
-        /// hero actually changed tile. Silent (no speech, no cue); reads are on demand.
+        /// frame and after a map change, then — while follow is on — returns to the hero whenever a
+        /// hero turn has elapsed (<c>GameMasterScript.turnNumber</c>), not only when the hero changed
+        /// tile. That way a turn spent standing still (waiting, attacking in place, a monster acting
+        /// while you hold position) still brings the cursor home and refreshes the differential
+        /// baseline, so a danger square that lit up underfoot reads correctly on the next peek. A
+        /// peek made within a turn persists across frames until the next turn returns it. Silent (no
+        /// speech, no cue); reads are on demand.
         /// </summary>
         public static void SyncFollow() {
             HeroPC hero = GameMasterScript.heroPCActor;
@@ -110,6 +117,7 @@ namespace TangledeepAccess.Gameplay {
             Vector2 p = hero.GetPos();
             int hx = (int)p.x;
             int hy = (int)p.y;
+            int turn = GameMasterScript.turnNumber;
 
             if (!_initialized || map != _lastMap) {
                 _x = hx;
@@ -118,17 +126,21 @@ namespace TangledeepAccess.Gameplay {
                 _lastMap = map;
                 _lastHeroX = hx;
                 _lastHeroY = hy;
+                _lastTurn = turn;
                 SetBaselineToHero(hero);
                 return;
             }
 
-            if (_follow && (hx != _lastHeroX || hy != _lastHeroY)) {
+            bool moved = hx != _lastHeroX || hy != _lastHeroY;
+            bool newTurn = turn != _lastTurn;
+            if (_follow && (moved || newTurn)) {
                 _x = hx;
                 _y = hy;
                 SetBaselineToHero(hero);
             }
             _lastHeroX = hx;
             _lastHeroY = hy;
+            _lastTurn = turn;
         }
 
         /// <summary>Step one tile (+x east, +y north): differential read, no coordinates.</summary>
