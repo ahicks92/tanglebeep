@@ -16,7 +16,11 @@ namespace Tanglebeep.Gameplay {
         public static readonly GameplayInputDrainer Instance = new GameplayInputDrainer();
 
         public override bool Claim(bool suppressWhileHeld) {
-            ModInputAction? action = InputKeys.Query() ?? InputKeys.NavAids();
+            // While aiming a cursor ability, the bare brackets cycle valid monster targets (the game
+            // disables their weapon-swap during targeting, so they are free). Gated on an open cursor
+            // targeting session so outside it the brackets stay the game's weapon-swap.
+            ModInputAction? action = TargetCycler.Active() ? InputKeys.TargetingCycle() : null;
+            action = action ?? InputKeys.Query() ?? InputKeys.NavAids();
             if (action.HasValue) {
                 InputQueue.Enqueue(this, action.Value);
                 return true;
@@ -47,6 +51,17 @@ namespace Tanglebeep.Gameplay {
             // menu; we only speak when there is no ally to command.
             if (action.Kind == ModInputKind.OpenActiveAllyMenu) {
                 speech.Speak(AllyReader.OpenActiveMenu());
+                return;
+            }
+
+            // Target cycling moves the targeting cursor, which announces the landing tile itself
+            // (ForceAnnounce, drained by the pump); Cycle returns a message only when nothing is in range.
+            if (action.Kind == ModInputKind.CycleTargetNext) {
+                speech.Speak(TargetCycler.Cycle(1));
+                return;
+            }
+            if (action.Kind == ModInputKind.CycleTargetPrev) {
+                speech.Speak(TargetCycler.Cycle(-1));
                 return;
             }
 

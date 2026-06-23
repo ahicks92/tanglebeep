@@ -13,15 +13,51 @@ Companion docs: `minimap.md`, `ui-framework.md`, `input-flow.md`.
 
 Using an ability with the `TARGETED` tag opens targeting via
 `UIManagerScript.EnterTargeting(abil, prevDir)` (`UIManagerScript.cs:18718`). It sets
-`abilityTargeting = true` and stores the active ability in `abilityInTargeting`. `EnterTargeting`
-auto-picks a sensible first target on entry (`:18846`–`:18999`): the direction held when
-targeting opened, else last-attacked enemy, else last attacker, else nearest hostile, else
-nearest valid tile. So a useful target/orientation is already selected the instant targeting
-begins. `UIManagerScript.CheckTargeting()` (`:5058`) reports whether targeting is active.
+`abilityTargeting = true` and stores the active ability in `abilityInTargeting`. So a useful
+target/orientation is already selected the instant targeting begins.
+`UIManagerScript.CheckTargeting()` (`:5058`) reports whether targeting is active.
 
 The visual "brains" are in `UIManagerScript`, not in `PlayerInputTargetingManager` /
 `TargetingLineScript` (those only draw the line). Input during targeting is handled by
 `TDInputHandler.CheckForTargetingInput` (`TDInputHandler.cs:1714`).
+
+### Auto-pick on entry — two separate strategies
+
+`EnterTargeting` initializes the aim differently depending on whether the ability is
+`CURSORTARGET`, and the two paths are **mutually exclusive** — only one runs:
+
+- **Cursor abilities** (`CURSORTARGET`, `flag4` at `:18840`–`:18846`) place the **cursor** on a
+  best-guess target tile, in priority order (`:18846`–`:18999`): the targetable best aligned
+  with the direction held when targeting opened (preferring the last-attacked enemy if it lies
+  that way), else **last-attacked enemy** (`lastActorAttacked`), else **last attacker**
+  (`lastActorAttackedBy`), else nearest registered combat target, else nearest valid targetable
+  (monster/hero/destructible cascade), else a random good tile. This is the "remember my target"
+  behavior — see below.
+- **Directional abilities** (non-`CURSORTARGET` **and** `CANROTATE` **and**
+  `targetForMonster == ENEMY`, `flag` at `:18735`) instead **auto-orient the shape**
+  (`:18797`–`:18819`): they loop over the four cardinal directions, build the targeting tiles for
+  each, and set `lineDir` to whichever cardinal currently covers the most targetable actors.
+  They do **not** consult `lastActorAttacked` at all — there is no last-target memory for
+  cones/lines; the aim is recomputed from the current battlefield each time.
+
+### Last-target memory (`lastActorAttacked` / `lastActorAttackedBy`)
+
+The "memory of the last targeted thing" lives on the hero's `Fighter`, not in the targeting UI:
+
+- `Fighter.lastActorAttacked` (`Fighter.cs:41`) is set on **every** resolved attack/ability
+  (`CombatManagerScript.cs:3454`); `lastActorAttackedBy` (`:43`) is the inverse, set when
+  something hits you (`:525`, `:3157`, ...).
+- It **persists across save/load**: serialized by actor unique ID (`Fighter.cs:45`, `:329`) and
+  reconnected to the live actor on load (`GameMasterScript.cs:3821`–`3827`).
+- It self-invalidates: the getters return 0 for a dead/destroyed actor (`Fighter.cs:1393`–
+  `1404`), and the targeting auto-pick re-checks `IsAlive()` before honoring it.
+
+This is consumed **only** by the cursor-ability auto-pick above. Directional/cone abilities never
+read it.
+
+**Not the memory:** `UIManagerScript.lastCursorPosition` (`:1088`) is a *within-session* scratch
+value — every cursor move stashes the prior tile (`:7011`, `:7023`) so an invalid cursor move
+snaps back to the last valid tile (`:7124`). It is meaningless across casts.
 
 ## The core split: shape-on-cursor vs. shape-from-hero
 

@@ -124,6 +124,12 @@ namespace Tanglebeep.Overlays {
                     new NodeVtable {
                         Label = ctx => {
                             string label = GameLabelReader.ReadLabel(captured);
+                            // Toggle/checkbox choices (e.g. the Spell Shaper shape menu) carry their
+                            // active state in the ButtonCombo, not the visible text — the game marks it
+                            // only with a color and a "* " the label read drops. Speak it explicitly.
+                            if (IsToggledOn(captured) && !string.IsNullOrEmpty(label)) {
+                                label = ModStrings.Selected + ", " + label;
+                            }
                             if (!string.IsNullOrEmpty(label)) {
                                 ctx.Message.Fragment(label);
                             }
@@ -160,6 +166,12 @@ namespace Tanglebeep.Overlays {
             sb.Append(TextboxActive() ? '1' : '0');
             sb.Append(ImageActive() ? '1' : '0');
             return sb.ToString();
+        }
+
+        // A dialog choice's checkbox state, read from the authoritative ButtonCombo (the visible text
+        // only hints at it via color/"* "). False for plain choices, which never set it.
+        private static bool IsToggledOn(UIManagerScript.UIObject choice) {
+            return choice?.button != null && choice.button.toggled;
         }
 
         private static string ReadBody() {

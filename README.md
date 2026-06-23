@@ -74,6 +74,35 @@ Finally, note that the main menu has some focus issues and text boxes do not wor
 - Recenter the exploration cursor on your character: ctrl+k
 - Open the game's help system: f1
 
+### Targeting
+
+You enter targeting when you fire a ranged weapon (f) or use a targeted ability or item from a
+hotbar slot. While targeting, the movement/target keys (q w e a d z x c, or the arrow keys)
+drive the aim, enter confirms, and escape cancels. What those keys do — and what the mod
+speaks — depends on the ability's shape:
+
+- **Point and placed-area abilities** move a cursor over the map. The mod reads the tile under
+  the cursor: what's on it, its direction and distance from you, and whether it's a valid
+  target. While aiming these, the brackets jump the cursor straight to a valid target: `]` to
+  the next monster you can hit, `[` to the previous (skipping empty tiles). Each landing target
+  is announced; "no targets in range" if there is nothing to hit.
+- **Line, cone, claw, and arc abilities** rotate the shape around you instead of moving a
+  cursor. The mod reads the shape, the direction it now points, its range, and every enemy
+  caught in the affected area. Cones snap to the four cardinal directions; lines aim in all
+  eight. Shapes the game lets you spin with the mouse wheel or the gamepad rotate control —
+  including Spell Shaper's reshaped spells — re-announce as you spin them.
+
+**Where each shape sits.** Aiming without sight means knowing the anchor point of the effect:
+
+- **Ray / beam** (a line that fires from you): you are at the near end, and the line extends
+  outward in the aimed direction only.
+- **Line** (a segment placed on the cursor): the cursor is the middle of the line, which
+  reaches equally far in both directions along its axis.
+- **Square** (an area on the cursor): the cursor is the center tile, not a corner — a range-1
+  square is the 3-by-3 block around the cursor.
+- **Cone**: you are the apex, but your own tile is not included; the wedge starts one tile out
+  and widens by one tile per step.
+
 ### Navigation aids
 
 Audio cues you turn on and off. Ctrl + an f-key toggles an aid; shift + the same f-key runs it exactly once.

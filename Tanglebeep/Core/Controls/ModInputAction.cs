@@ -104,6 +104,13 @@ namespace Tanglebeep.Controls {
         LogHistoryPrev,
         LogHistoryNext,
 
+        // Cursor-targeting target cycling. While aiming a cursor (free-movement) ability, the bare
+        // brackets jump the targeting cursor between the monsters it can validly hit — ] to the next,
+        // [ to the previous — skipping empty tiles. Bare brackets are free here because the game
+        // disables their weapon-swap while targeting is open.
+        CycleTargetNext,
+        CycleTargetPrev,
+
         // Navigation aids (free play): a framework of audio cues on F-key slots, distinct from the
         // spoken queries. Dx carries the aid index (F1 = 0, F2 = 1, …). These name only the modifier;
         // each aid's hook decides the meaning, but by convention Ctrl+Fn toggles an aid on or off and

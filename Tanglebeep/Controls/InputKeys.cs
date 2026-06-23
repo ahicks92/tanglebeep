@@ -179,6 +179,31 @@ namespace Tanglebeep.Controls {
         }
 
         /// <summary>
+        /// Targeting target-cycle keys: while aiming a cursor ability, the bare brackets jump the
+        /// targeting cursor between valid monster targets — <c>]</c> to the next, <c>[</c> to the
+        /// previous. Bare only (Ctrl+brackets stay the combat-log scrollback in <see cref="Query"/>);
+        /// the caller claims these only while a cursor targeting session is open, where the game has
+        /// disabled the brackets' weapon-swap, so they shadow nothing.
+        /// </summary>
+        public static ModInputAction? TargetingCycle() {
+            bool mod = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)
+                || Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt)
+                || Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            if (mod) {
+                return null;
+            }
+
+            if (Input.GetKeyDown(KeyCode.RightBracket)) {
+                return ModInputAction.Of(ModInputKind.CycleTargetNext);
+            }
+            if (Input.GetKeyDown(KeyCode.LeftBracket)) {
+                return ModInputAction.Of(ModInputKind.CycleTargetPrev);
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// The hotbar READ keys: backtick speaks bar 1, Ctrl+backtick speaks bar 2 (the bank rides in
         /// Dx, 0 or 1). Claimed by the top-priority <see cref="HotbarInputDrainer"/> so the bars are
         /// readable even while a full-screen overlay owns input (e.g. check a bar before assigning in
