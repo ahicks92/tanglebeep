@@ -44,6 +44,40 @@ namespace Tanglebeep.Tests.Ui {
         }
 
         [Fact]
+        public void MenuStartDefaultsToFirstItem() {
+            GraphRender render = Menu("a", "b", "c");
+            Assert.Equal("a", render.StartKey.StructuralKey);
+        }
+
+        [Fact]
+        public void MenuSetStartLandsOnNamedNode() {
+            // A menu overlay can land focus on a node other than the top-left cell (e.g. the primary
+            // action of a freshly revealed section) via SetStart.
+            var b = new GraphBuilder();
+            b.AddLabel(ControlId.Structural("header"), c => c.Message.Fragment("header"));
+            b.AddLabel(ControlId.Structural("action"), c => c.Message.Fragment("action"));
+            b.SetStart(ControlId.Structural("action"));
+            GraphRender render = b.Build();
+
+            Assert.Equal("action", render.StartKey.StructuralKey);
+
+            var state = new GraphState();
+            var g = new KeyGraph(_ => render, state);
+            g.Rerender(Ctx());
+            Assert.Equal("action", state.CurKey.StructuralKey);
+        }
+
+        [Fact]
+        public void MenuSetStartToUnknownNodeFallsBackToFirstItem() {
+            var b = new GraphBuilder();
+            b.AddLabel(ControlId.Structural("a"), c => c.Message.Fragment("a"));
+            b.AddLabel(ControlId.Structural("b"), c => c.Message.Fragment("b"));
+            b.SetStart(ControlId.Structural("ghost")); // never added
+            GraphRender render = b.Build();
+            Assert.Equal("a", render.StartKey.StructuralKey);
+        }
+
+        [Fact]
         public void DeletingFocusedNodeLandsOnPreviousInOrder() {
             GraphRender render = Menu("a", "b", "c", "d");
             var state = new GraphState();

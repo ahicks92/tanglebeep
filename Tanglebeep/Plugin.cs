@@ -89,6 +89,7 @@ namespace Tanglebeep {
             _dispatcher.Register(new OptionsOverlay().Handler);        // options menu (Esc)
             _dispatcher.Register(new JournalOverlay().Handler);        // journal (Alt+Q): recipes/rumors/log/pedia
             _dispatcher.Register(new CookingOverlay().Handler);        // town cooking station
+            _dispatcher.Register(new ItemDreamsOverlay().Handler);     // Item Dreams / Dreamcaster window
             UiRuntime.Dispatcher = _dispatcher;
 
             try {

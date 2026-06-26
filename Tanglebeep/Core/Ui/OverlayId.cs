@@ -42,6 +42,9 @@ namespace Tanglebeep.Ui {
         Corral,
         // The corral breeding screen (pick two monsters, breed).
         CorralBreed,
+        // The Item Dreams / Dreamcaster window (the game's "Item World" interface): pick a piece of
+        // gear, then an orb, set an optional gold/JP tribute, and enter the dream to enchant it.
+        ItemDreams,
 
         // Mod-only UIs (no game widget) go below here as they are added.
 

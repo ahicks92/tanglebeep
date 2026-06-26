@@ -410,5 +410,35 @@ namespace Tanglebeep.Speech {
         public const string PanCleared = "pan cleared";
         public const string RepeatedMeal = "repeated last meal";
         public const string CantRepeatMeal = "can't repeat that meal";
+
+        // --- Item Dreams (the Dreamcaster / "Item World" window) -------------------------------
+
+        // Stage headers.
+        public const string DreamSelectItem = "select an item to dream";
+
+        public static string DreamSelectOrb(string item) {
+            return "select an orb for " + item;
+        }
+
+        // Empty pools.
+        public const string NoDreamItems = "no eligible items";
+        public const string NoDreamOrbs = "no item world orbs";
+
+        // Header counts and money.
+        public static string DreamOrbCount(int count) {
+            return count + (count == 1 ? " item world orb" : " item world orbs");
+        }
+
+        // The tribute slider: how much gold / JP the player is staking and the resulting magic
+        // (extra-enchant) chance it buys.
+        public static string DreamTribute(int amount, bool jp, int chancePercent) {
+            return "tribute " + (jp ? Jp(amount) : Gold(amount))
+                + ", " + chancePercent + " percent magic chance";
+        }
+
+        // Action button fallback labels (the game's own button caption is preferred when present).
+        public const string EnterDreamAction = "enter dream";
+        public const string ModifyItemAction = "modify item";
+        public const string ExitDreamAction = "exit";
     }
 }

@@ -203,7 +203,12 @@ namespace Tanglebeep.Ui.Graph {
                 }
             }
 
-            render.StartKey = _rows[0].Items[0].Id;
+            // Honor an explicit SetStart when it names a real node; otherwise default to the first
+            // item of the first row. This lets a menu overlay land focus somewhere other than its
+            // top-left cell (e.g. on the primary action of a freshly revealed section).
+            render.StartKey = _rawStart != null && render.Nodes.ContainsKey(_rawStart)
+                ? _rawStart
+                : _rows[0].Items[0].Id;
 
             for (int rowIdx = 0; rowIdx < _rows.Count; rowIdx++) {
                 Row row = _rows[rowIdx];

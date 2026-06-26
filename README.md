@@ -191,6 +191,26 @@ Fill the pan with at least two ingredients (plus an optional seasoning) and cook
 dish you made is read out. As in the normal game there is no preview; you cook to find
 out what a combination makes.
 
+### Item Dreams
+
+The Item Dreams window (talk to the Dreamcaster and choose to dream an item) enchants a
+piece of gear by spending an Item World Orb and diving into a generated "dream". It is a
+two-stage menu:
+
+- First, a list of your eligible gear. The header reads how many item world orbs you have
+  and your gold and JP; `k` on an item reads what dreaming it would do. Confirm picks it.
+- Then, a list of your orbs. Each orb reads its name and, against the item you chose,
+  whether it can be applied (or why not — already has that mod, wrong slot, no free slots,
+  conflicts); `k` reads the orb's full tooltip. Confirm picks it.
+
+Once an orb is picked, an actions row appears: a **tribute** slider (left/right to stake
+more gold or JP, shift to jump to none/max — staking more raises the percent chance of an
+extra enchant, which is read out), **enter dream**, **modify item** (remove mods, when the
+item allows it), and **exit**. Entering or modifying hands off to the usual dialog.
+
+Escape backs out one stage at a time (orb back to the orb list, the orb list back to the
+item list, the item list closes the window), the same as the sighted controls.
+
 ### Monster Corral, Pets, and Breeding
 
 The monster corral (talk to the ranch keeper, then "View Monsters") is navigated like
@@ -210,3 +230,14 @@ reads each one's feelings toward the other and whether they're willing.
 Naming a newly tamed or bred monster uses a text box, which is not yet supported, so
 you can't type a custom name — but the naming prompt's "Random" and "That's the name!"
 buttons both work (the latter lets the keeper name it for you), so nothing blocks.
+
+## Known Issues
+
+- **Item Dream results — the first three numbers are unlabeled.** When you finish an
+  Item Dream, the results screen opens with a row of three bare numbers before the
+  labeled stats (Fountains Found, Items Looted, Goldfrogs Caught). In order they are the
+  **XP**, **JP**, and **gold** you earned in the dream — the game labels them with icons
+  instead of words, and the mod can't read an icon, so only the numbers come through. The
+  rest of the screen (the rewards above, the new mod and item name below) reads correctly.
+  This icon-instead-of-text case is rare; most screens already read right, so it is left
+  as-is for now.
