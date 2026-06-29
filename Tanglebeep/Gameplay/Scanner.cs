@@ -104,7 +104,9 @@ namespace Tanglebeep.Gameplay {
                 return;
             }
 
-            string name = GameLabelReader.Clean(a.displayName);
+            // A stairs-like special entrance (the Waterway trigger NPC) carries no display name; use its
+            // own label so it reads sensibly under Stairs rather than falling back to the raw ref name.
+            string name = SpecialEntrances.Label(a) ?? GameLabelReader.Clean(a.displayName);
             if (string.IsNullOrEmpty(name)) {
                 name = a.actorRefName; // e.g. stairs carry no displayName
             }
@@ -305,6 +307,12 @@ namespace Tanglebeep.Gameplay {
         /// of services is a one-line change.
         /// </summary>
         public static ScanCategory Categorize(Actor a) {
+            // A stairs-like special entrance (e.g. the Waterway "jump into the river" NPC) is bucketed
+            // under Stairs, not Services — it functions as a down-staircase to an alternate dungeon.
+            if (SpecialEntrances.IsStairsLikeEntrance(a)) {
+                return ScanCategory.Stairs;
+            }
+
             switch (a.GetActorType()) {
                 case ActorTypes.MONSTER:
                     return ScanCategory.Monsters;

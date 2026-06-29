@@ -43,12 +43,19 @@ namespace Tanglebeep.Gameplay {
                     continue;
                 }
 
-                // Gold piles (obj_coins destructibles) are walked over, not attacked, and carry an
-                // empty displayName, so the generic name filter would drop them. Name them by their
-                // value so the treasure read can speak "47 gold" rather than nothing.
-                string name = actor is Destructible coins && coins.moneyHeld > 0
-                    ? coins.moneyHeld + " gold"
-                    : GameLabelReader.Clean(actor.displayName) ?? SpecialActorName(actor);
+                // A stairs-like special entrance (the Waterway "jump into the river" trigger NPC) carries
+                // no display name and would otherwise be dropped; give it its own label. Gold piles
+                // (obj_coins destructibles) are walked over, not attacked, and also carry an empty
+                // displayName, so the generic name filter would drop them — name them by their value so
+                // the treasure read can speak "47 gold" rather than nothing.
+                string name;
+                if (SpecialEntrances.IsStairsLikeEntrance(actor)) {
+                    name = SpecialEntrances.WaterwayLabel;
+                } else if (actor is Destructible coins && coins.moneyHeld > 0) {
+                    name = coins.moneyHeld + " gold";
+                } else {
+                    name = GameLabelReader.Clean(actor.displayName) ?? SpecialActorName(actor);
+                }
                 if (name != null && seen.Add(Key(name, p))) {
                     found.Add(Make(name, actor.actorfaction == Faction.ENEMY, hp, p, actor, Classify(actor)));
                 }
@@ -143,6 +150,12 @@ namespace Tanglebeep.Gameplay {
         // "shop" only when it actually runs a shop (a non-empty shopRef). Everything else (doors, props,
         // story NPCs, terrain) falls back to the default triangle tone and is omitted from the PoI read.
         private static RadarCategory Classify(Actor actor) {
+            // A stairs-like special entrance (e.g. the Waterway "jump into the river" NPC) pings as
+            // stairs, not as the service NPC the game models it as.
+            if (SpecialEntrances.IsStairsLikeEntrance(actor)) {
+                return RadarCategory.Stairs;
+            }
+
             switch (actor.GetActorType()) {
                 case ActorTypes.MONSTER:
                     return RadarCategory.Monster;
