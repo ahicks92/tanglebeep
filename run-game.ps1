@@ -145,6 +145,33 @@ if ($Speech) {
     $speechNote = "speech: off (captured for /speech)"
 }
 
+# --- DLC: bridge DLC detection on a direct (non-Steam) launch ----------------
+# We Start-Process the exe directly, so Steamworks never initializes
+# (SteamManager.Initialized = false). The game's DLCManager then falls back to an
+# on-disk marker check rooted at Application.dataPath ("<Game>\Tangledeep_Data"),
+# but each DLC depot installs its marker one level up at the GAME ROOT
+# (e.g. "<Game>\los\loschk"). That path mismatch makes owned DLC read as absent.
+# Mirror each real depot marker into the fallback location so the game's own check
+# finds it. Steam only downloads a DLC depot you hold a license for, so a marker's
+# presence at the game root means it's owned - we mirror exactly what's on disk.
+$DlcMarkers = @(
+    @{ Name = "Legend of Shara"; Rel = "los\loschk" },   # EXPANSION1 / appid 953080
+    @{ Name = "Dawn of Dragons"; Rel = "dod\dodchk" }    # EXPANSION2 / appid 1156710
+)
+foreach ($d in $DlcMarkers) {
+    $root = Join-Path $Game $d.Rel
+    $fallback = Join-Path $Game (Join-Path "Tangledeep_Data" $d.Rel)
+    if (Test-Path $root) {
+        if (-not (Test-Path $fallback)) {
+            New-Item -ItemType Directory -Force -Path (Split-Path $fallback) | Out-Null
+            Copy-Item $root $fallback -Force
+            Write-Host "DLC: mirrored $($d.Name) marker into Tangledeep_Data for direct-launch detection." -ForegroundColor Cyan
+        }
+    } else {
+        Write-Host "DLC: $($d.Name) depot marker not found; launching without it." -ForegroundColor Yellow
+    }
+}
+
 $proc = Start-Process -FilePath $Exe -WorkingDirectory $Game -PassThru
 Write-Host "Launched Tangledeep (PID $($proc.Id)), dev server on http://127.0.0.1:8770, $speechNote. Blocking until it exits..." -ForegroundColor Cyan
 
