@@ -19,9 +19,9 @@ And finally this isn't complete.  The game is playable but not everything works 
 
 ## Installing
 
-You need the .NET CLI and Tangledeep through Steam.  After that run build.ps1 to install the mod.
+You need the .NET CLI and Tangledeep through Steam or GOG.  After that run build.ps1 to install the mod.
 
-If this doesn't work tell me why and I'll look into it. That script should find your game as long as it was installed through Steam, build the mod, and then install it.
+If this doesn't work tell me why and I'll look into it. That script should find your game as long as it was installed through Steam or GOG, build the mod, and then install it.
 
 ## Getting Started
 
