@@ -102,7 +102,7 @@ outside `Core/`.
     holder, e.g. a hard-killed launcher) is cleared automatically. The launcher also kills any
     orphaned game and **waits for process exit + port 8770 to free** (≤15s) before starting —
     `Stop-Process` returns before teardown, so a naive kill-then-start races the socket.
-- All scripts auto-locate the Steam install; override with `TANGLEDEEP_GAME`.
+- All scripts auto-locate Steam and GOG installs; override with `TANGLEDEEP_GAME`.
 - `<Version>` lives in `Directory.Build.props` (single source of truth; the plugin's
   `BepInPlugin` literal is generated from it). `LangVersion` 7.3 (safe for Unity Mono).
 - **Build output** for every project goes to a single repo-root `artifacts/` folder

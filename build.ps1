@@ -16,28 +16,11 @@ if ($Help) {
 
 $ErrorActionPreference = "Stop"
 
-# --- Locate the game install (same resolution as setup-bepinex.ps1) ---
-$Game = $env:TANGLEDEEP_GAME
-if (-not $Game) {
-    $RegSteam = (Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Valve\Steam" -Name InstallPath -ErrorAction SilentlyContinue).InstallPath
-    $DefaultSteam = if ($RegSteam) { $RegSteam } else { "C:\Program Files (x86)\Steam" }
-    $SteamPaths = @()
-    if (Test-Path "$DefaultSteam\steamapps") { $SteamPaths += $DefaultSteam }
-    $LibFolders = "$DefaultSteam\steamapps\libraryfolders.vdf"
-    if (Test-Path $LibFolders) {
-        $content = Get-Content $LibFolders -Raw
-        [regex]::Matches($content, '"path"\s+"([^"]+)"') | ForEach-Object {
-            $p = $_.Groups[1].Value -replace '\\\\', '\'
-            if ($p -ne $DefaultSteam -and (Test-Path "$p\steamapps")) { $SteamPaths += $p }
-        }
-    }
-    foreach ($steam in $SteamPaths) {
-        $candidate = "$steam\steamapps\common\Tangledeep"
-        if (Test-Path "$candidate\Tangledeep.exe") { $Game = $candidate; break }
-    }
-    if (-not $Game) { $Game = "C:\Program Files (x86)\Steam\steamapps\common\Tangledeep" }
-}
-if (-not (Test-Path "$Game\Tangledeep.exe")) {
+. "$PSScriptRoot\scripts\TangledeepGameLocator.ps1"
+
+# --- Locate the game install (same resolution as setup-bepinex.ps1 / run-game.ps1) ---
+$Game = Resolve-TangledeepGame
+if (-not (Test-TangledeepGameDir $Game)) {
     Write-Host "ERROR: Tangledeep not found at: $Game" -ForegroundColor Red
     Write-Host "Set the TANGLEDEEP_GAME environment variable to the game folder." -ForegroundColor Red
     exit 1
